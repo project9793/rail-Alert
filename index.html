@@ -429,6 +429,10 @@ body{
           <div class="set-row" id="rowKeySt" style="cursor:pointer"><span class="sl" data-i18n="apiKey"></span><span class="sr" id="keySt"></span></div>
           <div class="set-row" id="rowKey" style="cursor:pointer"><span class="sl" data-i18n="keyManage"></span><span class="sr">›</span></div>
           <div class="set-row"><span class="sl" data-i18n="pollRate"></span><span class="chips" id="pollChips" style="display:flex;gap:5px"></span></div>
+          <div class="set-row"><span class="sl" data-i18n="freshT"></span><label class="switch"><input type="checkbox" id="swFresh" checked><span class="tr2k"></span></label></div>
+          <div class="set-row" style="display:block;padding:2px 0 8px"><span id="freshHint" style="font-size:12px;line-height:1.7;color:var(--dim)"></span></div>
+          <div class="set-row"><span class="sl" data-i18n="apiTime"></span><span class="sr" id="apiTimeSt">—</span></div>
+          <div class="set-row" id="rowRaw" style="cursor:pointer"><span class="sl" data-i18n="rawView"></span><span class="sr">›</span></div>
           <div class="set-row"><span class="sl" data-i18n="apiUsed"></span><span class="sr" id="apiCountSt">0</span></div>
         </div>
         <div class="seclabel" data-i18n="setApp"></div>
@@ -503,6 +507,15 @@ body{
     </div>
   </div>
 
+  <!-- RAW API RESPONSE MODAL (diagnostics) -->
+  <div class="modal" id="rawModal">
+    <div class="msheet">
+      <h3 id="rawTitle"></h3>
+      <pre id="rawBody" style="max-height:52vh;overflow:auto;font-size:11px;line-height:1.55;white-space:pre-wrap;word-break:break-word;background:var(--surface2);padding:10px;border-radius:8px;color:var(--text)"></pre>
+      <button class="mclose" data-i18n="close"></button>
+    </div>
+  </div>
+
   <!-- LOCATION MODAL (GPS fallback / manual) -->
   <div class="modal" id="locModal">
     <div class="msheet">
@@ -554,7 +567,7 @@ hi:{
  gpsStatus:'GPS स्टेटस', locPerm:'लोकेशन परमिशन', grantedTxt:'दी गई', deniedTxt:'नहीं दी गई',
  language:'भाषा', darkMode:'डार्क मोड', about:'Rail Alert के बारे में', safetyInfo:'सुरक्षा जानकारी',
  aboutText:'Rail Alert — Live Train Safety Radar। एक anonymous, no-login ट्रेन सेफ्टी ऐप: कोई अकाउंट, OTP या पासवर्ड नहीं — ऐप खोलो, लोकेशन allow करो, राडार शुरू। यह ब्राउज़र प्रोटोटाइप सिम्युलेटेड डेटा पर चलता है। वास्तविक ऐप Android (Kotlin) में Foreground Service के साथ बैकग्राउंड मॉनिटरिंग करेगा और secure backend से authorized live-train API जोड़ेगा।',
- disclaimer:'Rail Alert एक supplementary safety-alert application है। Live train information में GPS error, network failure, data delay या अन्य technical limitations हो सकती हैं। इस application को railway signalling, official control communication या authorized railway safety system का replacement न समझें। किसी भी स्थिति में railway safety rules और authorized railway instructions का पालन करें।',
+ disclaimer:'Rail Alert एक supplementary safety-alert application है। Live train information में GPS error, network failure, data delay या अन्य technical limitations हो सकती हैं। इस application को railway signalling, official control communication या authorized railway safety system का replacement न समझें। किसी भी स्थिति में railway safety rules और authorized railway instructions का पालन करें। ध्यान दें: live train telemetry (NTES/RailRadar) कुछ मिनटों के अंतराल पर update होती है, इसलिए अलर्ट असली ट्रेन की स्थिति से कुछ मिनट पीछे हो सकता है।',
  speed:'स्पीड', dist:'दूरी', lgUser:'मेरी लोकेशन', lgTrain:'ट्रेन', lgTrack:'रेलवे ट्रैक', lgRadius:'सेफ्टी रेडियस',
  wmOnToast:'वर्क मोड चालू — मॉनिटरिंग सक्रिय', wmOffToast:'वर्क मोड बंद',
  gpsOnToast:'GPS चालू', gpsOffToast:'GPS बंद — अलर्ट रुके हुए हैं',
@@ -585,6 +598,18 @@ hi:{
       locClearedToast:'मैनुअल लोकेशन हटाई गई',
       locGpsOk:'📍 GPS लोकेशन मिल गई',
       locGpsFail:'GPS ने मना कर दिया — मैनुअल लोकेशन डालो',
+      freshT:'हाई-एक्यूरेसी टेलीमेट्री',
+      freshHint:'नज़दीकी 3 ट्रेनों का ताज़ा telemetry (असली speed + दिशा) cache bypass करके लाता है।',
+      rawView:'API raw response देखें',
+      apiTime:'API डेटा समय',
+      telemetry:'असली टेलीमेट्री',
+      dataAgeLbl:'डेटा',
+      minOld:'मिनट पुराना',
+      delayLbl:'देरी',
+      nextHaltLbl:'अगला',
+      staleData:'डेटा पुराना — असली ट्रेन आगे निकल सकती है',
+      rawTitle:'API raw response',
+      quotaHint:'अनुमानित खपत', reqHour:'requests/घंटा',
  liveErr401:'API की गलत है (401) — Settings में जाकर की दोबारा सेट करें',
  liveErr429:'Free quota (1,000 requests/माह) खत्म (429) — DEMO mode use करें या plan upgrade करें',
  liveErrNet:'API तक request नहीं पहुंची — या तो CORS block है (तब छोटा backend चाहिए) या internet गया है',
@@ -623,7 +648,7 @@ en:{
  gpsStatus:'GPS Status', locPerm:'Location Permission', grantedTxt:'Granted', deniedTxt:'Not granted',
  language:'Language', darkMode:'Dark Mode', about:'About Rail Alert', safetyInfo:'Safety Information',
  aboutText:'Rail Alert — Live Train Safety Radar. An anonymous, no-login train safety app: no account, OTP or password — open the app, allow location, start the radar. This browser prototype runs on simulated data. The real app will be built in Android (Kotlin) with a Foreground Service for background monitoring, connected to an authorized live-train API via a secure backend.',
- disclaimer:'Rail Alert is a supplementary safety-alert application. Live train information can contain GPS error, network failure, data delay or other technical limitations. Do not treat this application as a replacement for railway signalling, official control communication or an authorized railway safety system. Always follow railway safety rules and authorized railway instructions.',
+ disclaimer:'Rail Alert is a supplementary safety-alert application. Live train information can contain GPS error, network failure, data delay or other technical limitations. Do not treat this application as a replacement for railway signalling, official control communication or an authorized railway safety system. Always follow railway safety rules and authorized railway instructions. Note: live train telemetry (NTES/RailRadar) updates at intervals of a few minutes, so alerts can lag the real train position by a few minutes.',
  speed:'Speed', dist:'Distance', lgUser:'My Location', lgTrain:'Train', lgTrack:'Railway Track', lgRadius:'Safety Radius',
  wmOnToast:'Work Mode ON — monitoring active', wmOffToast:'Work Mode OFF',
  gpsOnToast:'GPS on', gpsOffToast:'GPS off — alerts paused',
@@ -654,6 +679,18 @@ en:{
       locClearedToast:'Manual location cleared',
       locGpsOk:'📍 GPS location found',
       locGpsFail:'GPS was blocked — enter a manual location',
+      freshT:'High-accuracy telemetry',
+      freshHint:'Fetches fresh telemetry (real speed + heading) for the 3 nearest trains, bypassing the cache.',
+      rawView:'View raw API response',
+      apiTime:'API data time',
+      telemetry:'REAL TELEMETRY',
+      dataAgeLbl:'data',
+      minOld:'min old',
+      delayLbl:'delay',
+      nextHaltLbl:'next',
+      staleData:'data is stale — the real train may be further ahead',
+      rawTitle:'API raw response',
+      quotaHint:'estimated usage', reqHour:'requests/hour',
  liveErr401:'API key is wrong (401) — set it again in Settings',
  liveErr429:'Free quota (1,000 requests/month) exhausted (429) — use DEMO mode or upgrade the plan',
  liveErrNet:'Could not reach the API — either CORS is blocking (a small backend is then needed) or the internet is down',
@@ -668,7 +705,7 @@ function t(k){const d=I18N[S.lang]||I18N.hi;return (k in d)?d[k]:(I18N.en[k]||k)
 function tf(k,n){return t(k).replace('{n}',n);}
 
 /* ================= state ================= */
-const DEF={radius:5,workMode:true,voice:true,vibration:true,sound:true,critical:true,lang:'hi',dark:true,granted:false,gps:false};
+const DEF={radius:5,workMode:true,voice:true,vibration:true,sound:true,critical:true,lang:'hi',dark:true,granted:false,gps:false,fresh:true};
 let S=Object.assign({},DEF);
 let history=[];
 let net='live';        // live | slow | offline
@@ -796,7 +833,11 @@ function updateEmergency(){
   $('emName').textContent=emTrain.d.name;
   $('emSpeed').textContent=emTrain.d.speed?Math.round(emTrain.d.speed)+' KM/H':t('speedU');
   $('emDist').textContent=emTrain.dist.toFixed(1)+' KM';
-  $('emDir').textContent='➡️ '+t('approach');
+  const det=detailMap.get(emTrain.d.num);
+  let emExtra='➡️ '+t('approach');
+  if(det&&det.ageMin!=null)emExtra+=' · 📡 '+t('dataAgeLbl')+': '+det.ageMin+' '+t('minOld');
+  if(det&&det.delay)emExtra+=' · ⏱ '+det.delay+'m';
+  $('emDir').textContent=emExtra;
   $('emVoice').textContent='⚠️ '+t('dangerMsg');
   $('emSafe').textContent=t('safe');
 }
@@ -850,6 +891,7 @@ function renderAll(now){
   renderRadar();
   renderTrains();
   $('setGpsSt').textContent=manualLoc?(t('gpsManual')+' 📍'):(S.gps?t('active'):t('off'));
+  $('apiTimeSt').textContent=liveMetaTs?(Math.max(0,Math.round((Date.now()-liveMetaTs)/60000))+' '+t('minOld')):'—';
   $('setPermSt').textContent=S.granted?t('grantedTxt'):t('deniedTxt');
   if(curScreen==='alerts')renderAlerts();
 }
@@ -905,17 +947,31 @@ function trainCardHTML(tr){
   const statcls=tr.approach?'appr':'away';
   const spd=tr.d.speed!=null?Math.round(tr.d.speed)+' KM/H':t('speedU');
   const staleHtml=stale?' · <b style="color:var(--red)">⚠️ '+t('stale')+'</b>':'';
+  const det=detailMap.get(tr.d.num);
+  let telHtml='';
+  if(det){
+    const bits=[];
+    if(det.delay!=null&&det.delay>0)bits.push(t('delayLbl')+': '+det.delay+'m');
+    if(det.nextHalt)bits.push(t('nextHaltLbl')+': '+det.nextHalt);
+    if(det.ageMin!=null)bits.push(t('dataAgeLbl')+': '+(det.ageMin<1?'<1':det.ageMin)+' '+t('minOld'));
+    const old=(det.ageMin!=null&&det.ageMin>5);
+    telHtml='<div class="upd" style="color:'+(old?'var(--red)':'var(--green,#31C48D)')+'">📡 '+(det.isActual?t('telemetry'):'')+(bits.length?' · '+bits.join(' · '):'')+'</div>';
+  }
   return '<div class="tcard '+cls+'">'
     +'<div class="tr1"><span class="tnum">🚆 '+tr.d.num+'</span><span class="tname">'+tr.d.name+'</span>'
     +'<span class="tstat '+statcls+'">'+(tr.fresh?'⏳ '+t('detecting'):(tr.approach?'➡️ '+t('approach'):t('away')))+'</span></div>'
     +'<div class="tr2"><span>'+t('speed')+': <b>'+spd+'</b></span><span>'+t('dist')+': <b>'+tr.dist.toFixed(1)+' KM</b></span></div>'
     +'<div class="upd'+(stale?' stale':'')+'">🕒 '+tf('updatedAgo',age)+staleHtml+'</div>'
+    +telHtml
     +'</div>';
 }
 
 function renderTrains(){
-  $('trainsOffBan').style.display=net==='offline'?'flex':'none';
-  $('trainsOffBan').textContent='⚠️ '+t('liveDataNo');
+  const apiAge=liveMetaTs?Math.max(0,Math.round((Date.now()-liveMetaTs)/60000)):null;
+  const ban=$('trainsOffBan');
+  if(net==='offline'){ban.style.display='flex';ban.textContent='⚠️ '+t('liveDataNo');}
+  else if(MODE==='live'&&apiAge!=null&&apiAge>5){ban.style.display='flex';ban.textContent='⚠️ '+t('staleData')+' — '+apiAge+' '+t('minOld');}
+  else ban.style.display='none';
   const n=AT().filter(x=>x.dist<=S.radius).length;
   $('trainsHeader').textContent=t('nearby')+' – '+String(n).padStart(2,'0')+' ('+S.radius+' KM)';
   const list=$('trainList');
@@ -1044,6 +1100,13 @@ $('swVoice').onchange=e=>{S.voice=e.target.checked;save();};
 $('swVib').onchange=e=>{S.vibration=e.target.checked;save();};
 $('swSound').onchange=e=>{S.sound=e.target.checked;save();};
 $('swCrit').onchange=e=>{S.critical=e.target.checked;save();};
+$('swFresh').onchange=e=>{S.fresh=e.target.checked;save();applyStatic();};
+$('rowRaw').onclick=()=>{
+  $('rawBody').textContent='--- /v1/legacy/trains/live-map ---\n'+(lastRawMap||'(no data yet)')
+    +'\n\n--- /v1/trains/{num}/live ---\n'+(lastRawDetail||'(no data yet)');
+  $('rawModal').classList.add('on');
+};
+$('rawModal').addEventListener('click',e=>{if(e.target===$('rawModal'))$('rawModal').classList.remove('on');});
 $('swWm').onchange=e=>{S.workMode=e.target.checked;save();renderAll();};
 $('swDark').onchange=e=>{S.dark=e.target.checked;save();phone.classList.toggle('light',!S.dark);};
 document.querySelectorAll('.langbtn[data-lang]').forEach(b=>{
@@ -1095,7 +1158,10 @@ document.querySelectorAll('.ts-btn').forEach(b=>{
 let MODE=(S.mode==='live')?'live':'demo';
 let apiKey='',apiCount=0,quotaWarned=false,lastNetOk=true;
 try{apiKey=localStorage.getItem('railalert_apikey')||'';apiCount=+(localStorage.getItem('railalert_apicount')||0)||0;}catch(e){}
-let pollRate=S.pollRate||30;
+let pollRate=S.pollRate||60;
+let liveMetaTs=null;          // meta.timestamp of the last live-map response
+const detailMap=new Map();    // num -> fresh telemetry from /v1/trains/{num}/live
+let lastRawMap='',lastRawDetail='';
 let liveTrains=[];
 const liveMap=new Map();
 let userLat=null,userLng=null;
@@ -1108,7 +1174,7 @@ let liveTimer=null,pollBusy=false;
 
 function AT(){return MODE==='live'?liveTrains:trains;}
 function saveApi(){try{localStorage.setItem('railalert_apicount',String(apiCount));}catch(e){}}
-function renderPollChips(){const arr=[15,30,60];$('pollChips').innerHTML=arr.map(r=>'<button class="chip'+(r===pollRate?' on':'')+'" data-p="'+r+'">'+r+'s</button>').join('');}
+function renderPollChips(){const arr=[30,60,120,300];$('pollChips').innerHTML=arr.map(r=>'<button class="chip'+(r===pollRate?' on':'')+'" data-p="'+r+'">'+r+'s</button>').join('');}
 function openKeyModal(){$('keyInput').value=apiKey;$('keyModal').classList.add('on');}
 function openLocModal(){
   $('lmLat').value=manualLoc?String(manualLoc.lat):(userLat!=null?userLat.toFixed(5):'');
@@ -1172,6 +1238,8 @@ async function pollLive(){
     const j=await r.json();
     if(!j||!j.success){if(lastNetOk){toast('🌐 '+t('liveErrNet'),'war');lastNetOk=false;}net='offline';pollBusy=false;renderAll();return;}
     lastNetOk=true;
+    liveMetaTs=(j.meta&&j.meta.timestamp)?Date.parse(j.meta.timestamp):null;
+    try{lastRawMap=JSON.stringify({meta:j.meta,count:(j.data||[]).length,first:(j.data||[])[0]||null},null,1).slice(0,1500);}catch(e){}
     const now=Date.now(),seen=new Set();
     for(const x of (j.data||[])){
       const lat=+x.current_lat,lng=+x.current_lng;
@@ -1183,7 +1251,7 @@ async function pollLive(){
       seen.add(x.train_number);
       let tr=liveMap.get(x.train_number);
       if(!tr){
-        tr={d:{num:x.train_number,name:x.train_name||'-',speed:null},pos:{x:px,y:py,ang:0},dist,lastD:dist,approach:false,band:0,fsShown:false,ts:now,fresh:true};
+        tr={d:{num:x.train_number,name:x.train_name||'-',speed:null},pos:{x:px,y:py,ang:0},lat,lng,dist,lastD:dist,approach:false,band:0,fsShown:false,ts:now,fresh:true};
         liveMap.set(x.train_number,tr);
       }else{
         const dtH=(now-tr.ts)/3600000;
@@ -1194,6 +1262,7 @@ async function pollLive(){
           else if(dist>tr.dist+0.02)tr.approach=false;
         }
         tr.pos={x:px,y:py,ang:Math.atan2(py-tr.pos.y,px-tr.pos.x)};
+        tr.lat=lat;tr.lng=lng;
         tr.dist=dist;tr.ts=now;tr.fresh=false;
       }
       checkTrain(tr);
@@ -1203,6 +1272,43 @@ async function pollLive(){
       else tr.misses=0;
     }
     liveTrains=Array.from(liveMap.values());
+    // --- high-accuracy: real telemetry (speed + bearing) for the nearest trains ---
+    if(S.fresh){
+      const near=liveTrains.filter(t=>t.dist<=15).sort((a,b)=>a.dist-b.dist).slice(0,3);
+      for(const tr of near){
+        try{
+          const auth=tr.dist<=10?'?authoritative=true':'';
+          const rr=await fetch('https://api.railradar.in/v1/trains/'+tr.d.num+'/live'+auth,{headers:{'Authorization':'Bearer '+apiKey,'Accept':'application/json'}});
+          apiCount++;saveApi();
+          if(!rr.ok)continue;
+          const jj=await rr.json();
+          if(!jj||!jj.success)continue;
+          const d=jj.data||{},cl=d.currentLocation||{};
+          const up=d.lastUpdatedAt?Date.parse(d.lastUpdatedAt):null;
+          const det={speedKmh:isFinite(+cl.speedKmh)?+cl.speedKmh:null,
+                     bearing:isFinite(+cl.bearingDegrees)?+cl.bearingDegrees:null,
+                     updatedAt:up,
+                     ageMin:up?Math.max(0,Math.round((Date.now()-up)/60000)):null,
+                     delay:isFinite(+d.delayMinutes)?+d.delayMinutes:null,
+                     station:cl.stationCode||null,status:cl.status||null,
+                     isActual:cl.isActualPosition===true,
+                     nextHalt:(d.nextHalt&&d.nextHalt.stationName)||null};
+          detailMap.set(tr.d.num,det);
+          if(!lastRawDetail)try{lastRawDetail=JSON.stringify({trainNumber:d.trainNumber,lastUpdatedAt:d.lastUpdatedAt,currentLocation:cl,delayMinutes:d.delayMinutes},null,1).slice(0,1500);}catch(e){}
+          if(det.speedKmh!=null)tr.d.speed=Math.round(det.speedKmh);
+          // bearing-based approach: train heading towards us? (immediate, no 2nd poll needed)
+          if(det.bearing!=null&&det.speedKmh!=null&&det.speedKmh>5&&tr.lat!=null){
+            const dLat=userLat-tr.lat,dLng=(userLng-tr.lng)*Math.cos(userLat*Math.PI/180);
+            const brgToUser=(Math.atan2(dLng,dLat)*180/Math.PI+360)%360;
+            const diff=Math.abs(((det.bearing-brgToUser+540)%360)-180);
+            tr.approach=(diff<70);
+            tr.brgApproach=true;
+          }
+          tr.fresh=false;
+          checkTrain(tr);   // re-check with fresh speed/bearing so the alert is not a cycle late
+        }catch(e){}
+      }
+    }
     net='live';lastPollTs=now;
     if(emTrain&&!liveMap.has(emTrain.d.num)){emTrain=null;$('emerg').classList.remove('on');}
     else if(emTrain)updateEmergency();
@@ -1250,6 +1356,10 @@ function applyStatic(){
   $('swVoice').checked=S.voice;$('swVib').checked=S.vibration;
   $('swSound').checked=S.sound;$('swCrit').checked=S.critical;
   $('swWm').checked=S.workMode;$('swDark').checked=S.dark;
+  $('swFresh').checked=S.fresh;
+  const est=4*Math.round(3600/pollRate);
+  $('freshHint').textContent=t('freshHint')+' · '+t('quotaHint')+': ~'+est+' '+t('reqHour');
+  $('rawTitle').textContent=t('rawTitle');
   document.querySelectorAll('.langbtn[data-lang]').forEach(b=>b.classList.toggle('on',b.dataset.lang===S.lang));
   renderChips($('radiusChips2'));
   document.querySelectorAll('.langbtn[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode===MODE));
