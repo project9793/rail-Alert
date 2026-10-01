@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rail Alert — Live Train Safety Radar (Prototype)</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&family=Noto+Sans+Devanagari:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* ============ PAGE (outside phone) ============ */
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --page-bg:#0a0e13; --page-panel:#11161d; --page-border:rgba(255,255,255,.09);
+  --page-text:#e8edf2; --page-dim:#8b98a5; --page-accent:#f5a623; --mono:'JetBrains Mono',monospace;
+}
+html,body{height:100%}
+body{
+  font-family:'Barlow','Noto Sans Devanagari',sans-serif;
+  background:
+    linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px),
+    radial-gradient(ellipse 90% 70% at 70% 10%,#131a23 0%,#0a0e13 60%);
+  background-size:44px 44px,44px 44px,cover;
+  color:var(--page-text);min-height:100vh;display:flex;align-items:stretch;
+}
+.side{width:340px;min-width:340px;padding:36px 28px;border-right:1px solid var(--page-border);display:flex;flex-direction:column;gap:22px}
+.side .logo{display:flex;align-items:center;gap:12px}
+.side .logo .mark{width:44px;height:44px;border-radius:10px;background:#f5a623;color:#1a1206;display:grid;place-items:center;font-size:22px}
+.side h1{font-size:24px;font-weight:700;letter-spacing:.04em}
+.side .tag{font-family:var(--mono);font-size:11px;color:var(--page-accent);letter-spacing:.14em;text-transform:uppercase}
+.side p.desc{font-size:13.5px;line-height:1.65;color:var(--page-dim)}
+.side .sect{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;color:var(--page-dim);text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.side .sect::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--page-accent)}
+.demobtns{display:flex;flex-direction:column;gap:8px}
+.dbtn{font-family:'Barlow','Noto Sans Devanagari',sans-serif;font-size:13.5px;font-weight:600;text-align:left;padding:10px 14px;border-radius:9px;border:1px solid var(--page-border);background:#171e27;color:var(--page-text);cursor:pointer;transition:background .15s,transform .1s}
+.dbtn:hover{background:#1d2530}
+.dbtn:active{transform:scale(.98)}
+.dbtn.warn{border-color:rgba(229,72,77,.45);color:#ff8f93}
+.ts-row{display:flex;gap:6px}
+.ts-btn{flex:1;font-family:var(--mono);font-size:12px;padding:7px 0;border-radius:7px;border:1px solid var(--page-border);background:transparent;color:var(--page-dim);cursor:pointer}
+.ts-btn.on{background:#f5a623;color:#1a1206;border-color:#f5a623;font-weight:600}
+.feat{list-style:none;display:flex;flex-direction:column;gap:7px}
+.feat li{font-size:12.5px;color:var(--page-dim);padding-left:20px;position:relative;line-height:1.5}
+.feat li::before{content:'';position:absolute;left:2px;top:7px;width:6px;height:6px;border-radius:50%;background:#31c48d}
+.side .foot{margin-top:auto;font-size:11.5px;color:#5c6b7a;line-height:1.6;border-top:1px solid var(--page-border);padding-top:16px}
+.stage{flex:1;display:grid;place-items:center;padding:28px;overflow:auto}
+
+/* ============ PHONE ============ */
+.phone{
+  --bg:#0d1117; --surface:#161d26; --surface2:#1c2530; --border:rgba(255,255,255,.09);
+  --text:#eef2f6; --dim:#8b98a5; --green:#31c48d; --amber:#f5a623; --red:#e5484d;
+  --green-dim:rgba(49,196,141,.14); --amber-dim:rgba(245,166,35,.14); --red-dim:rgba(229,72,77,.14);
+  width:394px;height:820px;max-height:calc(100vh - 48px);background:var(--bg);border-radius:38px;
+  border:1px solid rgba(255,255,255,.13);box-shadow:0 30px 80px rgba(0,0,0,.55),inset 0 0 0 3px #000;
+  position:relative;overflow:hidden;display:flex;flex-direction:column;font-size:15px;
+}
+.phone.light{
+  --bg:#eef1f5; --surface:#ffffff; --surface2:#e4e9ef; --border:rgba(15,23,32,.12);
+  --text:#15202b; --dim:#5c6b7a; --green:#188653; --amber:#b97509; --red:#cf2f35;
+  --green-dim:rgba(24,134,83,.1); --amber-dim:rgba(185,117,9,.12); --red-dim:rgba(207,47,53,.1);
+}
+.sbar{display:flex;justify-content:space-between;align-items:center;padding:12px 24px 6px;font-family:var(--mono);font-size:12px;color:var(--dim);flex:none}
+.sbar .ic{display:flex;gap:6px;align-items:center}
+.sbar svg{display:block}
+
+/* ---- permission screen ---- */
+.perm{position:absolute;inset:0;background:var(--bg);z-index:60;display:flex;flex-direction:column;justify-content:center;padding:34px;gap:0;animation:fadeUp .5s ease}
+.perm .bigmark{width:84px;height:84px;border-radius:22px;background:var(--amber);color:#1a1206;display:grid;place-items:center;font-size:44px;margin-bottom:22px}
+.perm h2{font-size:32px;font-weight:700;letter-spacing:.02em}
+.perm .sub{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;color:var(--amber);text-transform:uppercase;margin:6px 0 26px}
+.perm .pcard{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;font-size:14.5px;line-height:1.65;color:var(--text);margin-bottom:24px}
+.btn{width:100%;padding:15px;border-radius:12px;border:none;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;transition:transform .1s,filter .15s}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--amber);color:#1a1206}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent;color:var(--dim);border:1px solid var(--border);margin-top:10px;font-weight:600}
+
+/* ---- app header ---- */
+.apphead{flex:none;padding:8px 16px 10px;border-bottom:1px solid var(--border);background:var(--surface)}
+.apphead .r1{display:flex;align-items:center;gap:10px}
+.apphead .amark{width:30px;height:30px;border-radius:8px;background:var(--amber);color:#1a1206;display:grid;place-items:center;font-size:16px}
+.apphead .ttl{font-weight:700;letter-spacing:.03em;font-size:16px}
+.apphead .pills{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.pill{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.05em;padding:4px 8px;border-radius:99px;display:flex;align-items:center;gap:5px;border:1px solid var(--border);color:var(--dim);white-space:nowrap}
+.pill .dot{width:6px;height:6px;border-radius:50%;background:var(--dim)}
+.pill.ok{color:var(--green);border-color:transparent;background:var(--green-dim)}
+.pill.ok .dot{background:var(--green);animation:livepulse 2s infinite}
+.pill.warnp{color:var(--amber);border-color:transparent;background:var(--amber-dim)}
+.pill.warnp .dot{background:var(--amber)}
+.pill.badp{color:var(--red);border-color:transparent;background:var(--red-dim)}
+.pill.badp .dot{background:var(--red)}
+@keyframes livepulse{0%,100%{opacity:1}50%{opacity:.35}}
+.banner{margin-top:10px;border-radius:10px;padding:9px 12px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:9px}
+.banner.wm{background:var(--green-dim);color:var(--green)}
+.banner.gps{background:var(--red-dim);color:var(--red);cursor:pointer;border:none;font-family:inherit}
+.banner.off{background:var(--red-dim);color:var(--red)}
+
+/* ---- screens ---- */
+.screens{flex:1;position:relative;overflow:hidden}
+.screen{position:absolute;inset:0;overflow-y:auto;padding:16px;display:none;flex-direction:column;gap:14px}
+.screen.on{display:flex;animation:fadeUp .3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px}
+.hero{background:linear-gradient(135deg,var(--surface),var(--surface2))}
+.hero .hrow{display:flex;align-items:center;gap:10px}
+.hero .hdot{width:9px;height:9px;border-radius:50%;background:var(--green);animation:livepulse 2s infinite}
+.hero .hdot.off{background:var(--red);animation:none}
+.hero h3{font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.hero h3.off{color:var(--red)}
+.hero .hdesc{font-size:12px;color:var(--dim);margin-top:7px;line-height:1.6}
+.wmbtn{margin-top:14px;width:100%;padding:16px;border-radius:12px;border:none;font-family:inherit;font-size:17px;font-weight:700;letter-spacing:.04em;cursor:pointer;background:var(--amber);color:#1a1206;transition:transform .1s,filter .15s}
+.wmbtn:active{transform:scale(.98)}
+.wmbtn.on{background:var(--green);color:#04150d}
+.statrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat .lb{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.stat .vl{font-family:'Barlow Condensed','Noto Sans Devanagari',sans-serif;font-size:46px;font-weight:700;line-height:1.1;margin-top:4px}
+.stat .vl small{font-size:16px;color:var(--dim);font-weight:600;margin-left:4px}
+.stat .hint{font-size:11.5px;color:var(--dim);margin-top:2px}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chip{font-family:var(--mono);font-size:12.5px;font-weight:600;padding:8px 13px;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--dim);cursor:pointer;transition:all .15s}
+.chip.on{background:var(--amber);border-color:var(--amber);color:#1a1206}
+.seclabel{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:2px 2px -6px}
+
+/* train cards */
+.tcard{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--dim);border-radius:12px;padding:13px 14px;display:flex;flex-direction:column;gap:8px}
+.tcard.appr{border-left-color:var(--amber)}
+.tcard.danger{border-left-color:var(--red)}
+.tcard .tr1{display:flex;align-items:baseline;gap:9px}
+.tcard .tnum{font-family:var(--mono);font-weight:600;font-size:16px}
+.tcard .tname{font-size:14.5px;font-weight:600}
+.tcard .tstat{margin-left:auto;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.06em;padding:3px 8px;border-radius:99px;white-space:nowrap}
+.tstat.appr{background:var(--amber-dim);color:var(--amber)}
+.tstat.away{background:rgba(139,152,165,.12);color:var(--dim)}
+.tcard .tr2{display:flex;gap:18px;font-size:13px;color:var(--dim)}
+.tcard .tr2 b{color:var(--text);font-family:var(--mono);font-weight:600;font-size:13.5px}
+.tcard .upd{font-size:11px;color:var(--dim);display:flex;gap:6px;align-items:center}
+.tcard .upd.stale{color:var(--red);font-weight:600}
+.empty{padding:34px 16px;text-align:center;color:var(--dim);font-size:14px;border:1px dashed var(--border);border-radius:12px}
+.offban{background:var(--red-dim);color:var(--red);border-radius:10px;padding:11px 14px;font-size:13.5px;font-weight:700;display:flex;gap:9px;align-items:center;letter-spacing:.02em}
+
+/* history */
+.hcard{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px}
+.hcard .lvl{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;font-family:var(--mono);font-size:10px;font-weight:600;flex:none;letter-spacing:.03em}
+.lvl.det{background:var(--amber-dim);color:var(--amber)}
+.lvl.war{background:#f07b16;color:#fff}
+.lvl.dgr{background:var(--red);color:#fff}
+.hcard .hmain{flex:1;min-width:0}
+.hcard .h1{font-size:14px;font-weight:600}
+.hcard .h2{font-size:12px;color:var(--dim);margin-top:2px}
+.hcard .hts{font-family:var(--mono);font-size:10.5px;color:var(--dim);text-align:right;line-height:1.5}
+
+/* settings */
+.set-row.needkey{background:rgba(245,166,35,.08)}
+.set-row.needkey .sl{color:var(--amber);font-weight:600}
+.set-group{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.set-row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border)}
+.set-row:last-child{border-bottom:none}
+.set-row .sl{flex:1;font-size:14.5px;font-weight:500}
+.set-row .sr{color:var(--dim);font-size:13px}
+.switch{position:relative;width:46px;height:26px;flex:none;cursor:pointer}
+.switch input{opacity:0;width:0;height:0}
+.switch .tr2k{position:absolute;inset:0;background:var(--surface2);border:1px solid var(--border);border-radius:99px;transition:.2s}
+.switch .tr2k::after{content:'';position:absolute;width:19px;height:19px;border-radius:50%;background:var(--dim);top:2.5px;left:3px;transition:.2s}
+.switch input:checked + .tr2k{background:var(--green)}
+.switch input:checked + .tr2k::after{background:#fff;left:23px}
+.langbtns{display:flex;gap:7px}
+.langbtn{font-family:'Barlow','Noto Sans Devanagari',sans-serif;font-size:13px;font-weight:600;padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dim);cursor:pointer}
+.langbtn.on{background:var(--amber);color:#1a1206;border-color:var(--amber)}
+
+/* ---- radar ---- */
+#scr-radar{padding:0;gap:0}
+.radar-top{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface);flex-wrap:wrap}
+.radar-map{flex:1;position:relative;background:radial-gradient(circle at 50% 55%,#12202b 0%,var(--bg) 75%)}
+.phone.light .radar-map{background:radial-gradient(circle at 50% 55%,#dce8f0 0%,var(--bg) 75%)}
+#radarSvg{width:100%;height:100%;display:block}
+.radar-ctrls{position:absolute;right:12px;top:12px;display:flex;flex-direction:column;gap:8px}
+.rbtn{width:38px;height:38px;border-radius:10px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:17px;font-weight:600;cursor:pointer;display:grid;place-items:center;font-family:var(--mono)}
+.rbtn:active{transform:scale(.94)}
+.radar-legend{position:absolute;left:12px;bottom:12px;display:flex;gap:6px;flex-wrap:wrap;max-width:70%}
+.lchip{font-size:10.5px;font-family:var(--mono);background:rgba(13,17,23,.78);border:1px solid var(--border);color:#cdd6de;padding:4px 9px;border-radius:99px;backdrop-filter:blur(4px)}
+.phone.light .lchip{background:rgba(255,255,255,.85);color:#33404d}
+.radar-note{position:absolute;right:12px;bottom:12px;font-family:var(--mono);font-size:9.5px;color:#7f8d9a;background:rgba(13,17,23,.7);padding:4px 8px;border-radius:6px}
+.phone.light .radar-note{background:rgba(255,255,255,.85)}
+
+/* ---- bottom nav ---- */
+.bnav{flex:none;display:flex;border-top:1px solid var(--border);background:var(--surface);padding:6px 6px calc(10px + env(safe-area-inset-bottom,0px))}
+.bnav button{flex:1;background:none;border:none;color:var(--dim);font-family:inherit;font-size:10.5px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 0 4px;cursor:pointer;border-radius:10px}
+.bnav button.on{color:var(--amber)}
+.bnav svg{width:21px;height:21px}
+
+/* ---- toasts ---- */
+.toasts{position:absolute;top:12px;left:12px;right:12px;z-index:70;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{border-radius:11px;padding:11px 14px;font-size:13px;font-weight:600;line-height:1.5;display:flex;gap:9px;align-items:flex-start;box-shadow:0 10px 30px rgba(0,0,0,.4);animation:toastin .3s ease}
+.toast.det{background:#3a2e10;color:#ffd98a;border:1px solid rgba(245,166,35,.4)}
+.toast.war{background:#4a2606;color:#ffc37a;border:1px solid rgba(240,123,22,.5)}
+.toast.dgr{background:#5a1113;color:#ffb3b5;border:1px solid rgba(229,72,77,.6)}
+.toast.inf{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+@keyframes toastin{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+
+/* ---- emergency overlay ---- */
+.emerg{position:absolute;inset:0;z-index:80;display:none;flex-direction:column;align-items:center;justify-content:center;padding:30px 26px;text-align:center;gap:0}
+.emerg.on{display:flex}
+.emerg.warn-lvl{background:linear-gradient(165deg,#7c3d05 0%,#4a2404 70%)}
+.emerg.dgr-lvl{background:linear-gradient(165deg,#b91c1c 0%,#711 70%);animation:emflash 1.1s infinite}
+@keyframes emflash{0%,100%{filter:brightness(1)}45%{filter:brightness(1.18)}}
+.emerg .emtop{font-family:var(--mono);font-size:13px;letter-spacing:.3em;color:#ffd9a8;font-weight:600}
+.emerg .emtitle{font-size:34px;font-weight:700;color:#fff;letter-spacing:.02em;margin:8px 0 20px;line-height:1.2}
+.emerg .emcard{background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.22);border-radius:16px;padding:18px 22px;width:100%;color:#fff}
+.emerg .emnum{font-family:var(--mono);font-size:22px;font-weight:600}
+.emerg .emname{font-size:15px;color:#ffe3c2;margin-top:2px}
+.emerg .emgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.emerg .emg .l{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:#ffce96;text-transform:uppercase}
+.emerg .emg .v{font-family:'Barlow Condensed','Noto Sans Devanagari',sans-serif;font-size:34px;font-weight:700;line-height:1.1}
+.emerg .emdir{margin-top:12px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.1em;color:#ffd9a8;border:1px solid rgba(255,217,168,.4);border-radius:99px;padding:5px 13px;display:inline-block}
+.emerg .emvoice{margin-top:20px;font-size:15px;line-height:1.6;color:#fff;font-weight:500;padding:0 6px}
+.emerg .emsafe{margin-top:26px;width:100%;padding:17px;border-radius:14px;border:2px solid #fff;background:rgba(255,255,255,.12);color:#fff;font-family:inherit;font-size:18px;font-weight:700;letter-spacing:.06em;cursor:pointer;backdrop-filter:blur(3px)}
+.emerg .emsafe:active{transform:scale(.98)}
+
+/* ---- modal ---- */
+.modal{position:absolute;inset:0;z-index:75;background:rgba(5,8,12,.72);display:none;align-items:flex-end;backdrop-filter:blur(2px)}
+.modal.on{display:flex;animation:fadeUp .25s ease}
+.modal .msheet{background:var(--surface);border-radius:22px 22px 0 0;width:100%;max-height:75%;overflow-y:auto;padding:22px 20px 30px;border-top:1px solid var(--border)}
+.modal h3{font-size:17px;margin-bottom:12px}
+.modal p{font-size:14px;line-height:1.75;color:var(--dim)}
+.modal .mclose{margin-top:18px;width:100%;padding:13px;border-radius:11px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer}
+
+@media (max-width:900px){
+  body{display:block}
+  .side{position:fixed;top:0;left:0;bottom:0;width:min(330px,86vw);min-width:0;border-right:1px solid var(--page-border);border-bottom:none;padding:24px 20px;z-index:110;overflow-y:auto;background:#0d1117;transform:translateX(-105%);transition:transform .28s ease;box-shadow:24px 0 60px rgba(0,0,0,.5)}
+  .side.open{transform:none}
+  .side .foot{display:block;margin-top:22px}
+  .scrim{position:fixed;inset:0;background:rgba(5,8,12,.6);z-index:100;display:none}
+  .scrim.on{display:block}
+  .drawer-btn{position:fixed;right:12px;bottom:78px;width:48px;height:48px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:21px;border:1px solid rgba(245,166,35,.55);background:#171e27;color:var(--page-text);cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.5);z-index:90}
+  .drawer-close{display:flex;position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:9px;border:1px solid var(--page-border);background:transparent;color:var(--page-text);font-size:16px;cursor:pointer;align-items:center;justify-content:center}
+  .stage{padding:10px}
+  .phone{width:100%;max-width:none;height:auto;min-height:calc(100dvh - 20px);border-radius:22px}
+  .drawer-btn.hidden{display:none}
+}
+.drawer-btn{display:none}
+.drawer-close{display:none}
+.scrim{display:none}
+</style>
+</head>
+<body>
+
+<aside class="side">
+  <div class="logo">
+    <div class="mark">🚆</div>
+    <div><h1>RAIL ALERT</h1><div class="tag">Live Train Safety Radar</div></div>
+  </div>
+  <button class="drawer-close" id="drawerClose">✕</button>
+  <p class="desc">Interactive app prototype — browser demo with <b>simulated train data</b>. Poora user flow: location permission → radar → alerts. Koi login, OTP ya admin panel nahi.</p>
+  <div class="sect">Demo controls</div>
+  <div class="demobtns">
+    <button class="dbtn warn" id="db-force">🚨 Force Danger Alert (train @ 2 KM)</button>
+    <button class="dbtn" id="db-net">🌐 Network: LIVE → SLOW → OFFLINE</button>
+    <button class="dbtn" id="db-gps">📡 Toggle GPS On/Off</button>
+    <button class="dbtn" id="db-reset">↺ Reset Demo</button>
+  </div>
+  <div class="sect">Simulation speed</div>
+  <div class="ts-row">
+    <button class="ts-btn" data-ts="1">1×</button>
+    <button class="ts-btn" data-ts="10">10×</button>
+    <button class="ts-btn on" data-ts="20">20×</button>
+  </div>
+  <div class="sect">Prototype me kya hai</div>
+  <ul class="feat">
+    <li>Location permission → Home / Radar (no login)</li>
+    <li>Live radar map — track, trains, direction, radius</li>
+    <li>Alert radius 1 / 2 / 5 / 10 / 15 KM (default 5)</li>
+    <li>Warning levels — 10 KM detected, 5 KM warning, 2 KM danger</li>
+    <li>Full-screen emergency alert + voice + vibration + alarm</li>
+    <li>Work Mode, alert history, offline & stale-data states</li>
+    <li>Hindi ⇄ English toggle, dark mode</li>
+  </ul>
+  <div class="foot">Real app: Android (Kotlin) + secure backend → authorized live-train API. Voice alert browser TTS se aata hai. Yeh demo data hai — real train positions nahi.</div>
+</aside>
+
+<main class="stage">
+<div class="phone" id="phone">
+
+  <div class="sbar">
+    <span id="clock">--:--</span>
+    <span class="ic">
+      <span id="jsDot" style="width:7px;height:7px;border-radius:50%;background:#e5484d;display:inline-block" title="JS status"></span>
+      <svg width="15" height="11" viewBox="0 0 15 11" fill="currentColor"><rect x="0" y="7" width="2.5" height="4" rx="1"/><rect x="4" y="5" width="2.5" height="6" rx="1"/><rect x="8" y="2.5" width="2.5" height="8.5" rx="1"/><rect x="12" y="0" width="2.5" height="11" rx="1"/></svg>
+      <svg width="20" height="11" viewBox="0 0 22 12" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="1" width="16" height="10" rx="2.5"/><rect x="3" y="3" width="12" height="6" rx="1" fill="currentColor" stroke="none"/><path d="M19.5 4v4" stroke-linecap="round"/><rect x="20.8" y="3.4" width="1.2" height="5.2" rx=".6" fill="currentColor" stroke="none"/></svg>
+    </span>
+  </div>
+
+  <!-- permission / splash -->
+  <div class="perm" id="permScreen">
+    <div class="bigmark">🚆</div>
+    <h2>RAIL ALERT</h2>
+    <div class="sub" data-i18n="tagline"></div>
+    <div class="pcard" data-i18n="permText"></div>
+    <button class="btn primary" id="btnAllow" data-i18n="allow"></button>
+    <button class="btn ghost" id="btnNotNow" data-i18n="notNow"></button>
+  </div>
+
+  <!-- app -->
+  <div id="app" style="display:none;flex:1;min-height:0;flex-direction:column">
+    <header class="apphead">
+      <div class="r1">
+        <div class="amark">🚆</div>
+        <div class="ttl">RAIL ALERT</div>
+        <div class="pills">
+          <span class="pill ok" id="netPill"><span class="dot"></span><span id="netPillTxt">LIVE</span></span>
+          <span class="pill ok" id="gpsPill"><span class="dot"></span><span id="gpsPillTxt">GPS</span></span>
+          <span class="pill" id="modePill"><span id="modePillTxt">DEMO</span></span>
+        </div>
+      </div>
+      <button class="banner wm" id="wmBanner" style="display:none"></button>
+      <button class="banner gps" id="gpsBanner" style="display:none"></button>
+    </header>
+
+    <div class="screens">
+      <div class="toasts" id="toasts"></div>
+
+      <!-- HOME -->
+      <section class="screen on" id="scr-home">
+        <div class="card hero" id="heroCard">
+          <div class="hrow"><span class="hdot" id="heroDot"></span><h3 id="heroTitle"></h3></div>
+          <div class="hdesc" id="heroDesc"></div>
+          <button class="wmbtn" id="wmBtn"></button>
+        </div>
+        <div class="statrow">
+          <div class="card stat">
+            <div class="lb" data-i18n="nearby"></div>
+            <div class="vl" id="nearbyCount">0</div>
+            <div class="hint" id="nearbyHint"></div>
+          </div>
+          <div class="card stat">
+            <div class="lb" data-i18n="radius"></div>
+            <div class="vl" id="radiusVal">5<small>KM</small></div>
+            <div class="hint" data-i18n="radiusHint"></div>
+          </div>
+        </div>
+        <div class="seclabel" data-i18n="radius"></div>
+        <div class="chips" id="radiusChips"></div>
+        <div class="seclabel" data-i18n="nearby"></div>
+        <div id="homeTrainList" style="display:flex;flex-direction:column;gap:10px"></div>
+      </section>
+
+      <!-- RADAR -->
+      <section class="screen" id="scr-radar">
+        <div class="radar-top">
+          <span class="pill ok" id="rNet"><span class="dot"></span><span id="rNetTxt">LIVE</span></span>
+          <span class="pill" id="rAge">--</span>
+          <span class="pill" id="rTrainCount">🚆 0</span>
+          <span class="pill" id="rApi">API 0</span>
+        </div>
+        <div class="radar-map" id="radarMap">
+          <svg id="radarSvg" viewBox="-16 -20 32 40" preserveAspectRatio="xMidYMid slice">
+            <g id="rZoom">
+              <circle id="ring10" r="10" fill="none" stroke="rgba(139,152,165,.28)" stroke-width=".09" stroke-dasharray=".5 .45"/>
+              <circle id="ring5" r="5" fill="none" stroke="rgba(139,152,165,.4)" stroke-width=".09"/>
+              <circle id="ring2" r="2" fill="none" stroke="rgba(229,72,77,.55)" stroke-width=".1"/>
+              <text x="0" y="-10.35" class="ringlbl" fill="rgba(139,152,165,.7)" font-size=".55" text-anchor="middle" font-family="JetBrains Mono">10 KM</text>
+              <text x="0" y="-5.35" class="ringlbl" fill="rgba(139,152,165,.8)" font-size=".55" text-anchor="middle" font-family="JetBrains Mono">5 KM</text>
+              <text x="0" y="-2.35" class="ringlbl" fill="rgba(229,72,77,.8)" font-size=".55" text-anchor="middle" font-family="JetBrains Mono">2 KM</text>
+              <polyline id="trackLine" fill="none" stroke="#8b98a5" stroke-width=".28" stroke-linecap="round" stroke-linejoin="round" opacity=".85"/>
+              <polyline id="trackDash" fill="none" stroke="#0d1117" stroke-width=".07" stroke-dasharray=".55 .55" opacity=".9"/>
+              <circle id="radiusCircle" r="5" fill="rgba(245,166,35,.06)" stroke="#f5a623" stroke-width=".12" stroke-dasharray=".45 .3"/>
+              <g id="userMark">
+                <circle r=".33" fill="#31c48d"/>
+                <circle r=".75" fill="none" stroke="#31c48d" stroke-width=".07" opacity=".55"/>
+                <text x="0" y="-1.05" font-size="1" text-anchor="middle">📍</text>
+              </g>
+              <g id="trainLayer"></g>
+            </g>
+          </svg>
+          <div class="radar-ctrls">
+            <button class="rbtn" id="zoomIn">+</button>
+            <button class="rbtn" id="zoomOut">−</button>
+            <button class="rbtn" id="zoomReset" title="center">◎</button>
+          </div>
+          <div class="radar-legend">
+            <span class="lchip">📍 <span data-i18n="lgUser"></span></span>
+            <span class="lchip">🚆 <span data-i18n="lgTrain"></span></span>
+            <span class="lchip">🛤 <span data-i18n="lgTrack"></span></span>
+            <span class="lchip">⭕ <span data-i18n="lgRadius"></span></span>
+          </div>
+          <div class="radar-note" id="radarNote">SIMULATED DATA</div>
+          <div class="offban" id="radarOffBan" style="position:absolute;top:12px;left:12px;right:12px;display:none"></div>
+        </div>
+      </section>
+
+      <!-- TRAINS -->
+      <section class="screen" id="scr-trains">
+        <div class="offban" id="trainsOffBan" style="display:none"></div>
+        <div class="seclabel" id="trainsHeader"></div>
+        <div id="trainList" style="display:flex;flex-direction:column;gap:10px"></div>
+      </section>
+
+      <!-- ALERTS -->
+      <section class="screen" id="scr-alerts">
+        <div class="seclabel" data-i18n="history"></div>
+        <div id="historyList" style="display:flex;flex-direction:column;gap:10px"></div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="screen" id="scr-settings">
+        <div class="seclabel" data-i18n="setAlerts"></div>
+        <div class="set-group">
+          <div class="set-row"><span class="sl" data-i18n="radius"></span><span class="chips" id="radiusChips2" style="display:flex;gap:5px"></span></div>
+          <div class="set-row"><span class="sl" data-i18n="voiceAlert"></span><label class="switch"><input type="checkbox" id="swVoice" checked><span class="tr2k"></span></label></div>
+          <div class="set-row"><span class="sl" data-i18n="vibration"></span><label class="switch"><input type="checkbox" id="swVib" checked><span class="tr2k"></span></label></div>
+          <div class="set-row"><span class="sl" data-i18n="alarmSound"></span><label class="switch"><input type="checkbox" id="swSound" checked><span class="tr2k"></span></label></div>
+          <div class="set-row"><span class="sl" data-i18n="critical"></span><label class="switch"><input type="checkbox" id="swCrit" checked><span class="tr2k"></span></label></div>
+          <div class="set-row"><span class="sl" data-i18n="workMode"></span><label class="switch"><input type="checkbox" id="swWm" checked><span class="tr2k"></span></label></div>
+        </div>
+        <div class="seclabel" data-i18n="setLocation"></div>
+        <div class="set-group">
+          <div class="set-row"><span class="sl" data-i18n="gpsStatus"></span><span class="sr" id="setGpsSt"></span></div>
+          <div class="set-row"><span class="sl" data-i18n="locPerm"></span><span class="sr" id="setPermSt"></span></div>
+          <div class="set-row" id="rowLoc" style="cursor:pointer"><span class="sl" data-i18n="setLoc"></span><span class="sr" id="locSt">›</span></div>
+        </div>
+        <div class="seclabel" data-i18n="setLive"></div>
+        <div class="set-group">
+          <div class="set-row"><span class="sl" data-i18n="dataSource"></span>
+            <span class="langbtns">
+              <button class="langbtn" data-mode="demo">DEMO</button>
+              <button class="langbtn" data-mode="live">LIVE</button>
+            </span>
+          </div>
+          <div class="set-row" id="rowKeySt" style="cursor:pointer"><span class="sl" data-i18n="apiKey"></span><span class="sr" id="keySt"></span></div>
+          <div class="set-row" id="rowKey" style="cursor:pointer"><span class="sl" data-i18n="keyManage"></span><span class="sr">›</span></div>
+          <div class="set-row"><span class="sl" data-i18n="pollRate"></span><span class="chips" id="pollChips" style="display:flex;gap:5px"></span></div>
+          <div class="set-row"><span class="sl" data-i18n="apiUsed"></span><span class="sr" id="apiCountSt">0</span></div>
+        </div>
+        <div class="seclabel" data-i18n="setApp"></div>
+        <div class="set-group">
+          <div class="set-row"><span class="sl" data-i18n="language"></span>
+            <span class="langbtns">
+              <button class="langbtn" data-lang="hi">हिन्दी</button>
+              <button class="langbtn" data-lang="en">English</button>
+            </span>
+          </div>
+          <div class="set-row"><span class="sl" data-i18n="darkMode"></span><label class="switch"><input type="checkbox" id="swDark" checked><span class="tr2k"></span></label></div>
+          <div class="set-row"><span class="sl" data-i18n="history"></span><span class="sr">›</span></div>
+          <div class="set-row"><span class="sl" id="rowAbout" style="cursor:pointer">ℹ️ <span data-i18n="about"></span></span><span class="sr">›</span></div>
+          <div class="set-row"><span class="sl" id="rowSafety" style="cursor:pointer">⚠️ <span data-i18n="safetyInfo"></span></span><span class="sr">›</span></div>
+        </div>
+      </section>
+    </div>
+
+    <nav class="bnav">
+      <button data-scr="home" class="on">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span data-i18n="navHome"></span></button>
+      <button data-scr="radar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="21" y1="12" x2="17" y2="12"/><line x1="7" y1="12" x2="3" y2="12"/><line x1="12" y1="7" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="17"/></svg>
+        <span data-i18n="navRadar"></span></button>
+      <button data-scr="trains">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="13" rx="3"/><line x1="5" y1="10" x2="19" y2="10"/><circle cx="9" cy="19" r="1.4"/><circle cx="15" cy="19" r="1.4"/><line x1="7" y1="16" x2="5" y2="20"/><line x1="17" y1="16" x2="19" y2="20"/></svg>
+        <span data-i18n="navTrains"></span></button>
+      <button data-scr="alerts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span data-i18n="navAlerts"></span></button>
+      <button data-scr="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+        <span data-i18n="navSettings"></span></button>
+    </nav>
+  </div>
+
+  <!-- EMERGENCY OVERLAY -->
+  <div class="emerg warn-lvl" id="emerg">
+    <div class="emtop">🚨 RAIL ALERT 🚨</div>
+    <div class="emtitle" id="emTitle"></div>
+    <div class="emcard">
+      <div class="emnum" id="emNum"></div>
+      <div class="emname" id="emName"></div>
+      <div class="emgrid">
+        <div class="emg"><div class="l" data-i18n="speed"></div><div class="v" id="emSpeed"></div></div>
+        <div class="emg"><div class="l" data-i18n="dist"></div><div class="v" id="emDist"></div></div>
+      </div>
+      <div class="emdir" id="emDir"></div>
+    </div>
+    <div class="emvoice" id="emVoice"></div>
+    <button class="emsafe" id="emSafe"></button>
+  </div>
+
+  <!-- MODAL (about / safety) -->
+  <div class="modal" id="modal">
+    <div class="msheet">
+      <h3 id="mTitle"></h3>
+      <p id="mBody"></p>
+      <button class="mclose" data-i18n="close"></button>
+    </div>
+  </div>
+
+  <div class="modal" id="keyModal">
+    <div class="msheet">
+      <h3 id="kmTitle"></h3>
+      <input type="text" id="keyInput" placeholder="rg_... yahan paste karo" autocomplete="off" spellcheck="false" autocapitalize="off" style="width:100%;padding:15px;border-radius:10px;border:1.5px solid rgba(245,166,35,.5);background:var(--surface2);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:15px;outline:none;-webkit-text-security:disc">
+      <p id="kmHint" style="font-size:14px;line-height:1.8;color:var(--amber);margin-top:12px;font-weight:600"></p>
+      <p id="kmNote" style="font-size:13px;line-height:1.7;color:var(--dim);margin-top:10px"></p>
+      <button class="mclose" id="kmSave"></button>
+      <button class="mclose" id="kmClear" style="margin-top:8px"></button>
+    </div>
+  </div>
+
+  <!-- LOCATION MODAL (GPS fallback / manual) -->
+  <div class="modal" id="locModal">
+    <div class="msheet">
+      <h3 id="lmTitle"></h3>
+      <button class="mclose" id="lmTryGps" style="background:#31C48D;color:#04150D"></button>
+      <input type="text" id="lmLat" inputmode="decimal" autocomplete="off" spellcheck="false" autocapitalize="off" style="width:100%;padding:15px;border-radius:10px;border:1.5px solid rgba(245,166,35,.5);background:var(--surface2);color:var(--text);font-size:15px;outline:none;margin-top:8px">
+      <input type="text" id="lmLng" inputmode="decimal" autocomplete="off" spellcheck="false" autocapitalize="off" style="width:100%;padding:15px;border-radius:10px;border:1.5px solid rgba(245,166,35,.5);background:var(--surface2);color:var(--text);font-size:15px;outline:none;margin-top:8px">
+      <p id="lmHint" style="font-size:13px;line-height:1.8;color:var(--amber);margin-top:12px;font-weight:600"></p>
+      <button class="mclose" id="lmSave" style="margin-top:8px"></button>
+      <button class="mclose" id="lmClear" style="margin-top:8px"></button>
+    </div>
+  </div>
+
+</div>
+</main>
+
+<div class="scrim" id="scrim"></div>
+<button class="drawer-btn" id="drawerBtn" title="Demo Controls">⚙️</button>
+
+<script>
+'use strict';
+/* ================= i18n ================= */
+const I18N = {
+hi:{
+ tagline:'लाइव ट्रेन सेफ्टी राडार',
+ permText:'Rail Alert को आपके आसपास आने वाली trains की जानकारी देने के लिए आपकी location की आवश्यकता है।',
+ allow:'Location Allow करें', notNow:'अभी नहीं',
+ live:'लाइव', slow:'धीमा नेटवर्क', offline:'ऑफलाइन',
+ monitoringOn:'लाइव मॉनिटरिंग सक्रिय', monitoringOff:'मॉनिटरिंग बंद',
+ wmDesc:'GPS मॉनिटरिंग • ट्रेन मॉनिटरिंग • बैकग्राउंड मॉनिटरिंग • लाउड अलर्ट • वाइब्रेशन • क्रिटिकल नोटिफिकेशन',
+ wmOffDesc:'वर्क मोड चालू करें ताकि ट्रेन अलर्ट सक्रिय रहें।',
+ workModeOn:'वर्क मोड सक्रिय', workMode:'वर्क मोड',
+ nearby:'आसपास की ट्रेनें', radius:'अलर्ट रेडियस', radiusHint:'डिफ़ॉल्ट 5 KM',
+ myLoc:'मेरी लोकेशन', active:'सक्रिय', off:'बंद',
+ gpsOff:'GPS बंद', locRequired:'ट्रेन सुरक्षा अलर्ट के लिए लोकेशन आवश्यक है — चालू करने के लिए टैप करें',
+ navHome:'होम',navRadar:'राडार',navTrains:'ट्रेनें',navAlerts:'अलर्ट',navSettings:'सेटिंग्स',
+ approach:'पास आ रही है', away:'दूर जा रही है',
+ speedU:'स्पीड उपलब्ध नहीं', noTrains:'कोई ट्रेन नजदीक नहीं', liveDataNo:'लाइव ट्रेन डेटा उपलब्ध नहीं — पुराना डेटा लाइव नहीं दिखाया जा रहा',
+ stale:'पुराना डेटा', updatedAgo:'{n} सेकंड पहले अपडेट हुआ',
+ detectedMsg:'आपके क्षेत्र की ओर एक ट्रेन आ रही है।',
+ warningMsg:'ट्रेन आपके निर्धारित क्षेत्र के पास है।',
+ dangerMsg:'सावधान! ट्रेन बहुत नजदीक है। रेलवे ट्रैक से तुरंत सुरक्षित दूरी पर जाएं।',
+ voice:'सावधान! ट्रेन आपके कार्य क्षेत्र के पास आ रही है। कृपया रेलवे ट्रैक से तुरंत सुरक्षित दूरी पर चले जाएं।',
+ emergency:'ट्रेन पास आ रही है', safe:"मैं सुरक्षित हूं",
+ history:'अलर्ट हिस्ट्री', noHistory:'अभी तक कोई अलर्ट नहीं',
+ detected:'डिटेक्टेड', warning:'वार्निंग', danger:'डेंजर',
+ setAlerts:'अलर्ट सेटिंग्स', setLocation:'लोकेशन', setApp:'ऐप', close:'बंद करें',
+ voiceAlert:'वॉइस अलर्ट', vibration:'वाइब्रेशन', alarmSound:'अलार्म साउंड', critical:'क्रिटिकल अलर्ट',
+ gpsStatus:'GPS स्टेटस', locPerm:'लोकेशन परमिशन', grantedTxt:'दी गई', deniedTxt:'नहीं दी गई',
+ language:'भाषा', darkMode:'डार्क मोड', about:'Rail Alert के बारे में', safetyInfo:'सुरक्षा जानकारी',
+ aboutText:'Rail Alert — Live Train Safety Radar। एक anonymous, no-login ट्रेन सेफ्टी ऐप: कोई अकाउंट, OTP या पासवर्ड नहीं — ऐप खोलो, लोकेशन allow करो, राडार शुरू। यह ब्राउज़र प्रोटोटाइप सिम्युलेटेड डेटा पर चलता है। वास्तविक ऐप Android (Kotlin) में Foreground Service के साथ बैकग्राउंड मॉनिटरिंग करेगा और secure backend से authorized live-train API जोड़ेगा।',
+ disclaimer:'Rail Alert एक supplementary safety-alert application है। Live train information में GPS error, network failure, data delay या अन्य technical limitations हो सकती हैं। इस application को railway signalling, official control communication या authorized railway safety system का replacement न समझें। किसी भी स्थिति में railway safety rules और authorized railway instructions का पालन करें।',
+ speed:'स्पीड', dist:'दूरी', lgUser:'मेरी लोकेशन', lgTrain:'ट्रेन', lgTrack:'रेलवे ट्रैक', lgRadius:'सेफ्टी रेडियस',
+ wmOnToast:'वर्क मोड चालू — मॉनिटरिंग सक्रिय', wmOffToast:'वर्क मोड बंद',
+ gpsOnToast:'GPS चालू', gpsOffToast:'GPS बंद — अलर्ट रुके हुए हैं',
+ netLive:'नेटवर्क लाइव', netSlow:'नेटवर्क धीमा', netOff:'नेटवर्क ऑफलाइन',
+ setLive:'लाइव ट्रेन डेटा (RailRadar API)',
+ dataSource:'डेटा सोर्स',
+ apiKey:'API की',
+ keyManage:'की सेट करें / बदलें',
+ keySet:'सेट है ✔', keyNotSet:'सेट नहीं',
+ pollRate:'API पोल अंतराल',
+ apiUsed:'API requests इस्तेमाल',
+ kmTitle:'RailRadar API की',
+ kmNote:'की सिर्फ इस device के browser में save होती है — किसी file में कभी नहीं। Free plan: 1,000 requests/माह, LIVE mode में हर poll 1 request लेता है (tab background में होने पर poll रुक जाता है)।',
+ kmSave:'की सेव करें',
+ kmClear:'की हटाएं',
+ kmHint:'कैसे paste करें: नीचे box पर tap करो → उस पर उंगली दबाकर रखो (long press) → PASTE दबाओ → फिर "की सेव करें" दबाओ।',
+      lmTitle:'📍 लोकेशन सेट करें',
+      lmTryGps:'📡 GPS से लोकेशन लेने की कोशिश करें',
+      lmLatPh:'Latitude — जैसे 22.7196',
+      lmLngPh:'Longitude — जैसे 75.8577',
+      lmHint:'ब्राउज़र सुरक्षा नियम के कारण इस तरह खोली गई फ़ाइल (content:// या file://) में GPS ब्लॉक रहता है — यह आपकी गलती नहीं है। समाधान: Google Maps में अपनी जगह पर उंगली दबाकर रखो → ऊपर coordinates दिखेंगे (जैसे 22.7196, 75.8577) → उन्हें copy करके नीचे दोनों box में paste कर दो। असली GPS के लिए इस HTML को किसी https लिंक (GitHub Pages वग़ैरह) से खोलना होगा।',
+      lmSave:'लोकेशन सेव करें',
+      lmClear:'मैनुअल लोकेशन हटाएं',
+      lmBad:'अमान्य coordinates — दोनों box में नंबर डालो',
+      gpsManual:'मैनुअल',
+      setLoc:'मैनुअल लोकेशन',
+      locSavedToast:'📍 लोकेशन सेव हो गई — अब ट्रेन डिटेक्शन चालू',
+      locClearedToast:'मैनुअल लोकेशन हटाई गई',
+      locGpsOk:'📍 GPS लोकेशन मिल गई',
+      locGpsFail:'GPS ने मना कर दिया — मैनुअल लोकेशन डालो',
+ liveErr401:'API की गलत है (401) — Settings में जाकर की दोबारा सेट करें',
+ liveErr429:'Free quota (1,000 requests/माह) खत्म (429) — DEMO mode use करें या plan upgrade करें',
+ liveErrNet:'API तक request नहीं पहुंची — या तो CORS block है (तब छोटा backend चाहिए) या internet गया है',
+ liveNoKey:'पहले Settings में अपनी API की सेट करें',
+ demoOnly:'यह control सिर्फ DEMO mode में काम करता है',
+ liveOnToast:'🔴 LIVE mode ON — RailRadar API से real trains',
+ demoOnToast:'🔵 DEMO mode ON — simulated trains',
+ quotaWarn:'Free quota लगभग खत्म — {n} requests इस्तेमाल हो चुके हैं',
+ detecting:'पता लगा रहे हैं…',
+},
+en:{
+ tagline:'Live Train Safety Radar',
+ permText:'Rail Alert needs your location to show information about trains coming near you.',
+ allow:'Allow Location', notNow:'Not Now',
+ live:'LIVE', slow:'SLOW NETWORK', offline:'OFFLINE',
+ monitoringOn:'Live Monitoring Active', monitoringOff:'Monitoring Off',
+ wmDesc:'GPS Monitoring • Train Monitoring • Background Monitoring • Loud Alert • Vibration • Critical Notification',
+ wmOffDesc:'Turn on Work Mode to keep train alerts active.',
+ workModeOn:'Work Mode Active', workMode:'Work Mode',
+ nearby:'Nearby Trains', radius:'Alert Radius', radiusHint:'Default 5 KM',
+ myLoc:'My Location', active:'Active', off:'Off',
+ gpsOff:'GPS OFF', locRequired:'Location is required for train safety alerts — tap to turn on',
+ navHome:'Home',navRadar:'Radar',navTrains:'Trains',navAlerts:'Alerts',navSettings:'Settings',
+ approach:'APPROACHING', away:'MOVING AWAY',
+ speedU:'Speed unavailable', noTrains:'No trains nearby', liveDataNo:'LIVE TRAIN DATA UNAVAILABLE — stale data is not shown as live',
+ stale:'STALE DATA', updatedAgo:'Updated {n} sec ago',
+ detectedMsg:'A train is coming towards your area.',
+ warningMsg:'The train is near your designated area.',
+ dangerMsg:'Warning! The train is very close. Move to a safe distance from the railway track immediately.',
+ voice:'Warning! A train is approaching your work area. Move to a safe distance from the railway track immediately.',
+ emergency:'TRAIN APPROACHING', safe:"I'M SAFE",
+ history:'Alert History', noHistory:'No alerts yet',
+ detected:'DETECTED', warning:'WARNING', danger:'DANGER',
+ setAlerts:'Alert Settings', setLocation:'Location', setApp:'App', close:'Close',
+ voiceAlert:'Voice Alert', vibration:'Vibration', alarmSound:'Alarm Sound', critical:'Critical Alert',
+ gpsStatus:'GPS Status', locPerm:'Location Permission', grantedTxt:'Granted', deniedTxt:'Not granted',
+ language:'Language', darkMode:'Dark Mode', about:'About Rail Alert', safetyInfo:'Safety Information',
+ aboutText:'Rail Alert — Live Train Safety Radar. An anonymous, no-login train safety app: no account, OTP or password — open the app, allow location, start the radar. This browser prototype runs on simulated data. The real app will be built in Android (Kotlin) with a Foreground Service for background monitoring, connected to an authorized live-train API via a secure backend.',
+ disclaimer:'Rail Alert is a supplementary safety-alert application. Live train information can contain GPS error, network failure, data delay or other technical limitations. Do not treat this application as a replacement for railway signalling, official control communication or an authorized railway safety system. Always follow railway safety rules and authorized railway instructions.',
+ speed:'Speed', dist:'Distance', lgUser:'My Location', lgTrain:'Train', lgTrack:'Railway Track', lgRadius:'Safety Radius',
+ wmOnToast:'Work Mode ON — monitoring active', wmOffToast:'Work Mode OFF',
+ gpsOnToast:'GPS on', gpsOffToast:'GPS off — alerts paused',
+ netLive:'Network live', netSlow:'Network slow', netOff:'Network offline',
+ setLive:'Live Train Data (RailRadar API)',
+ dataSource:'Data Source',
+ apiKey:'API Key',
+ keyManage:'Set / change key',
+ keySet:'set ✔', keyNotSet:'not set',
+ pollRate:'API poll interval',
+ apiUsed:'API requests used',
+ kmTitle:'RailRadar API key',
+ kmNote:'The key is stored only in this browser — never in any file. Free plan: 1,000 requests/month; each poll in LIVE mode uses 1 request (polling pauses while the tab is in background).',
+ kmSave:'Save key',
+ kmClear:'Remove key',
+ kmHint:'How to paste: tap the box below → press and hold on it (long press) → tap PASTE → then tap "Save key".',
+      lmTitle:'📍 Set location',
+      lmTryGps:'📡 Try getting location from GPS',
+      lmLatPh:'Latitude — e.g. 22.7196',
+      lmLngPh:'Longitude — e.g. 75.8577',
+      lmHint:'Browser security rules block GPS on files opened this way (content:// or file://) — it is not your fault. Fix: open Google Maps, press and hold on your spot → coordinates appear at the top (like 22.7196, 75.8577) → copy them and paste into the two boxes below. For real GPS, this HTML must be opened from an https link (GitHub Pages etc.).',
+      lmSave:'Save location',
+      lmClear:'Clear manual location',
+      lmBad:'Invalid coordinates — enter numbers in both boxes',
+      gpsManual:'MANUAL',
+      setLoc:'Manual location',
+      locSavedToast:'📍 Location saved — train detection is now active',
+      locClearedToast:'Manual location cleared',
+      locGpsOk:'📍 GPS location found',
+      locGpsFail:'GPS was blocked — enter a manual location',
+ liveErr401:'API key is wrong (401) — set it again in Settings',
+ liveErr429:'Free quota (1,000 requests/month) exhausted (429) — use DEMO mode or upgrade the plan',
+ liveErrNet:'Could not reach the API — either CORS is blocking (a small backend is then needed) or the internet is down',
+ liveNoKey:'First set your API key in Settings',
+ demoOnly:'This control works in DEMO mode only',
+ liveOnToast:'🔴 LIVE mode ON — real trains from RailRadar API',
+ demoOnToast:'🔵 DEMO mode ON — simulated trains',
+ quotaWarn:'Free quota nearly exhausted — {n} requests used',
+ detecting:'detecting…',
+}};
+function t(k){const d=I18N[S.lang]||I18N.hi;return (k in d)?d[k]:(I18N.en[k]||k);}
+function tf(k,n){return t(k).replace('{n}',n);}
+
+/* ================= state ================= */
+const DEF={radius:5,workMode:true,voice:true,vibration:true,sound:true,critical:true,lang:'hi',dark:true,granted:false,gps:false};
+let S=Object.assign({},DEF);
+let history=[];
+let net='live';        // live | slow | offline
+let TS=20;             // time scale
+try{const sv=localStorage.getItem('railalert_proto');if(sv){const o=JSON.parse(sv);S=Object.assign(S,o.settings||{});history=o.history||[];}}catch(e){}
+
+function save(){try{localStorage.setItem('railalert_proto',JSON.stringify({settings:S,history:history.slice(0,50)}));}catch(e){}}
+
+/* ================= track & trains ================= */
+const TRACK=[[-16,-2.2],[-11,-0.95],[-7,-0.5],[-3,-0.32],[1,-0.3],[5,-0.55],[9,-1.35],[13,-2.7],[17,-4.2]];
+const SEG=[];{let c=0;for(let i=0;i<TRACK.length-1;i++){const a=TRACK[i],b=TRACK[i+1];const len=Math.hypot(b[0]-a[0],b[1]-a[1]);SEG.push({x1:a[0],y1:a[1],x2:b[0],y2:b[1],cum:c,len});c+=len;}}
+const TRACKLEN=SEG.reduce((a,s)=>a+s.len,0);
+function pointAt(s){
+  s=((s%TRACKLEN)+TRACKLEN)%TRACKLEN;
+  for(const g of SEG){ if(s<=g.cum+g.len){const tt=(s-g.cum)/g.len;
+    return {x:g.x1+(g.x2-g.x1)*tt, y:g.y1+(g.y2-g.y1)*tt, ang:Math.atan2(g.y2-g.y1,g.x2-g.x1)};}}
+  const g=SEG[SEG.length-1];return {x:g.x2,y:g.y2,ang:0};
+}
+function sAtX(tx){for(const g of SEG){if(tx>=g.x1&&tx<=g.x2){const tt=(tx-g.x1)/(g.x2-g.x1);return g.cum+tt*g.len;}}return 0;}
+
+const TRAIN_DEFS=[
+ {num:'12345', name:'Example Express',     speed:78, startX:-11,   dir:1},
+ {num:'12919', name:'Malwa SF Express',    speed:72, startX:-14.2, dir:1},
+ {num:'54703', name:'Bhopal Passenger',    speed:null, realSpeed:45, startX:-6.5, dir:1},
+ {num:'12621', name:'Tamil Nadu Express',  speed:96, startX:-12.8, dir:1},
+ {num:'22436', name:'Vananchal Express',   speed:91, startX:3,     dir:1},
+];
+let trains=[];
+function initTrains(){
+  trains=TRAIN_DEFS.map(d=>{
+    const s=sAtX(d.startX);
+    const p=pointAt(s);
+    const dist=Math.hypot(p.x,p.y);
+    return {d, s, pos:p, dist, lastD:dist, approach:dist>0&&d.startX<0, band:0, fsShown:false};
+  });
+}
+initTrains();
+
+/* ================= dom refs ================= */
+const $=id=>document.getElementById(id);
+const phone=$('phone');
+let emTrain=null;     // train shown in emergency overlay
+let lastPollTs=Date.now();
+const POLL_MS={live:5000,slow:15000,offline:Infinity};
+
+/* ================= audio / voice / vibration ================= */
+let actx=null;
+function beep(){
+  if(!S.sound)return;
+  try{
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    const t0=actx.currentTime;
+    for(let i=0;i<4;i++){
+      const o=actx.createOscillator(),g=actx.createGain();
+      o.type='square';o.frequency.value=880;
+      g.gain.setValueAtTime(0.0001,t0+i*0.3);
+      g.gain.exponentialRampToValueAtTime(0.15,t0+i*0.3+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,t0+i*0.3+0.24);
+      o.connect(g);g.connect(actx.destination);
+      o.start(t0+i*0.3);o.stop(t0+i*0.3+0.27);
+    }
+  }catch(e){}
+}
+function speak(txt){
+  if(!S.voice)return;
+  try{
+    const u=new SpeechSynthesisUtterance(txt);
+    u.lang=(S.lang==='hi')?'hi-IN':'en-IN';u.rate=0.95;u.volume=1;
+    const vs=speechSynthesis.getVoices();
+    const v=vs.find(v=>v.lang&&v.lang.toLowerCase().startsWith(S.lang==='hi'?'hi':'en'));
+    if(v)u.voice=v;
+    speechSynthesis.cancel();speechSynthesis.speak(u);
+  }catch(e){}
+}
+function vibrate(){
+  if(!S.vibration)return;
+  try{navigator.vibrate&&navigator.vibrate([300,150,300,150,700]);}catch(e){}
+}
+
+/* ================= toasts ================= */
+function toast(msg,lvl){ // lvl: det war dgr inf
+  const el=document.createElement('div');
+  el.className='toast '+(lvl||'inf');
+  el.textContent=msg;
+  $('toasts').appendChild(el);
+  setTimeout(()=>{el.style.transition='opacity .4s';el.style.opacity='0';setTimeout(()=>el.remove(),450);},4200);
+}
+
+/* ================= alert engine ================= */
+function monitoringActive(){return S.granted&&S.gps&&S.workMode;}
+
+function fireLevel(tr,lvl){
+  history.unshift({ts:Date.now(),num:tr.d.num,name:tr.d.name,speed:tr.d.speed,dist:Math.round(tr.dist*10)/10,lvl});
+  if(history.length>50)history.length=50;
+  save();
+  const msgs={det:'detectedMsg',war:'warningMsg',dgr:'dangerMsg'};
+  toast('🚆 '+tr.d.num+' · '+t(lvl==='det'?'detected':lvl==='war'?'warning':'danger')+' — '+t(msgs[lvl]),lvl);
+  renderAlerts();
+}
+
+function checkTrain(tr){
+  if(!monitoringActive())return;
+  if(!tr.approach){ if(tr.dist>3){tr.band=0;tr.fsShown=false;} return; }
+  let b=0;
+  if(tr.dist<=10)b=1; if(tr.dist<=5)b=2; if(tr.dist<=2)b=3;
+  if(b>tr.band){tr.band=b;fireLevel(tr,b===1?'det':b===2?'war':'dgr');}
+  if(b===3&&!emTrain){showEmergency(tr);return;}
+  if(tr.dist<=S.radius&&!tr.fsShown){tr.fsShown=true;showEmergency(tr);}
+}
+
+function showEmergency(tr){
+  emTrain=tr;
+  const em=$('emerg');
+  em.classList.add('on');
+  updateEmergency();
+  beep();vibrate();speak(t('voice'));
+}
+function updateEmergency(){
+  if(!emTrain)return;
+  const em=$('emerg');
+  em.classList.toggle('dgr-lvl',emTrain.dist<=2);
+  em.classList.toggle('warn-lvl',emTrain.dist>2);
+  $('emTitle').textContent='🚨 '+t('emergency')+' 🚨';
+  $('emNum').textContent='🚆 '+emTrain.d.num;
+  $('emName').textContent=emTrain.d.name;
+  $('emSpeed').textContent=emTrain.d.speed?Math.round(emTrain.d.speed)+' KM/H':t('speedU');
+  $('emDist').textContent=emTrain.dist.toFixed(1)+' KM';
+  $('emDir').textContent='➡️ '+t('approach');
+  $('emVoice').textContent='⚠️ '+t('dangerMsg');
+  $('emSafe').textContent=t('safe');
+}
+$('emSafe').addEventListener('click',()=>{emTrain=null;$('emerg').classList.remove('on');});
+
+/* ================= main tick ================= */
+setInterval(()=>{
+  const now=Date.now();
+  if(MODE==='demo'&&net!=='offline'){
+    if(now-lastPollTs>=POLL_MS[net])lastPollTs=now;
+    const dt=0.25*TS; // seconds (simulated)
+    for(const tr of trains){
+      const sp=tr.d.speed!=null?tr.d.speed:tr.d.realSpeed;
+      tr.s+=sp*dt/3600*tr.d.dir;
+      const p=pointAt(tr.s);
+      const d=Math.hypot(p.x,p.y);
+      if(d<tr.lastD-1e-4)tr.approach=true;
+      else if(d>tr.lastD+1e-4)tr.approach=false;
+      tr.pos=p;tr.dist=d;tr.lastD=d;
+      checkTrain(tr);
+    }
+    // auto-dismiss emergency when train recedes well past radius
+    if(emTrain&&(!emTrain.approach&&emTrain.dist>S.radius+1)){emTrain=null;$('emerg').classList.remove('on');}
+    if(emTrain)updateEmergency();
+  }
+  renderAll(now);
+},250);
+
+/* clock */
+setInterval(()=>{
+  const d=new Date();
+  $('clock').textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+},1000);
+
+/* ================= rendering ================= */
+function fmtTs(ts){
+  const d=new Date(ts);
+  const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let h=d.getHours();const ap=h>=12?'PM':'AM';h=h%12||12;
+  return d.getDate()+' '+M[d.getMonth()]+' '+d.getFullYear()+' – '+String(h).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+' '+ap;
+}
+function dataAge(){
+  if(MODE==='live')return Math.floor((Date.now()-lastPollTs)/1000);
+  if(net==='offline')return Math.floor((Date.now()-lastPollTs)/1000);
+  return Math.floor(((Date.now()-lastPollTs)%POLL_MS[net])/1000);
+}
+
+function renderAll(now){
+  renderHeader();
+  renderHome();
+  renderRadar();
+  renderTrains();
+  $('setGpsSt').textContent=manualLoc?(t('gpsManual')+' 📍'):(S.gps?t('active'):t('off'));
+  $('setPermSt').textContent=S.granted?t('grantedTxt'):t('deniedTxt');
+  if(curScreen==='alerts')renderAlerts();
+}
+
+function renderHeader(){
+  const np=$('netPill'),gp=$('gpsPill');
+  np.className='pill '+(net==='live'?'ok':net==='slow'?'warnp':'badp');
+  $('netPillTxt').textContent=t(net);
+  gp.className='pill '+(S.gps?'ok':'badp');
+  $('gpsPillTxt').textContent='GPS '+(manualLoc?t('gpsManual'):(S.gps?t('active'):t('off')));
+
+  const mp=$('modePill');
+  mp.className='pill '+(MODE==='live'?'ok':'');
+  $('modePillTxt').textContent=MODE==='live'?'LIVE API':'DEMO';
+  $('apiCountSt').textContent=apiCount+' / 1,000';
+  const wb=$('wmBanner'),gb=$('gpsBanner');
+  if(S.workMode){wb.style.display='flex';wb.textContent='🟢 '+t('workModeOn');}
+  else wb.style.display='none';
+  if(!S.gps||!S.granted){gb.style.display='flex';gb.textContent=(S.gps?'📡':'📍')+' '+t('locRequired');}
+  else gb.style.display='none';
+}
+
+function renderHome(){
+  const on=monitoringActive();
+  $('heroDot').className='hdot'+(on?'':' off');
+  $('heroTitle').className=on?'':'off';
+  $('heroTitle').textContent=on?'🟢 '+t('monitoringOn'):'⏸ '+t('monitoringOff');
+  $('heroDesc').textContent=on?t('wmDesc'):t('wmOffDesc');
+  const wb=$('wmBtn');
+  wb.className='wmbtn'+(S.workMode?' on':'');
+  wb.textContent=(S.workMode?'⏹ ':'▶ ')+t('workMode')+(S.workMode?' · ON':' · OFF');
+  const near=AT().filter(x=>x.dist<=S.radius);
+  $('nearbyCount').textContent=String(near.length).padStart(2,'0');
+  $('nearbyHint').textContent=t('myLoc')+': '+(manualLoc?'📍 '+t('gpsManual'):(S.gps?t('active'):t('off')));
+  $('radiusVal').innerHTML=S.radius+'<small>KM</small>';
+  renderChips($('radiusChips'));
+  const list=$('homeTrainList');
+  const sorted=sortTrains().slice(0,3);
+  list.innerHTML=sorted.length?sorted.map(trainCardHTML).join(''):'<div class="empty">'+t('noTrains')+'</div>';
+}
+
+function sortTrains(){
+  return AT().slice().filter(x=>x.dist<=15).sort((a,b)=>{
+    if(a.approach!==b.approach)return a.approach?-1:1;
+    return a.dist-b.dist;
+  });
+}
+
+function trainCardHTML(tr){
+  const age=dataAge();
+  const stale=(net==='offline'&&age>30);
+  const cls=tr.approach?(tr.dist<=2?'danger':'appr'):'';
+  const statcls=tr.approach?'appr':'away';
+  const spd=tr.d.speed!=null?Math.round(tr.d.speed)+' KM/H':t('speedU');
+  const staleHtml=stale?' · <b style="color:var(--red)">⚠️ '+t('stale')+'</b>':'';
+  return '<div class="tcard '+cls+'">'
+    +'<div class="tr1"><span class="tnum">🚆 '+tr.d.num+'</span><span class="tname">'+tr.d.name+'</span>'
+    +'<span class="tstat '+statcls+'">'+(tr.fresh?'⏳ '+t('detecting'):(tr.approach?'➡️ '+t('approach'):t('away')))+'</span></div>'
+    +'<div class="tr2"><span>'+t('speed')+': <b>'+spd+'</b></span><span>'+t('dist')+': <b>'+tr.dist.toFixed(1)+' KM</b></span></div>'
+    +'<div class="upd'+(stale?' stale':'')+'">🕒 '+tf('updatedAgo',age)+staleHtml+'</div>'
+    +'</div>';
+}
+
+function renderTrains(){
+  $('trainsOffBan').style.display=net==='offline'?'flex':'none';
+  $('trainsOffBan').textContent='⚠️ '+t('liveDataNo');
+  const n=AT().filter(x=>x.dist<=S.radius).length;
+  $('trainsHeader').textContent=t('nearby')+' – '+String(n).padStart(2,'0')+' ('+S.radius+' KM)';
+  const list=$('trainList');
+  const sorted=sortTrains();
+  list.innerHTML=sorted.length?sorted.map(trainCardHTML).join(''):'<div class="empty">'+t('noTrains')+'</div>';
+}
+
+function renderAlerts(){
+  const list=$('historyList');
+  if(!history.length){list.innerHTML='<div class="empty">🔔 '+t('noHistory')+'</div>';return;}
+  list.innerHTML=history.map(h=>{
+    const lv=h.lvl==='det'?['det',t('detected')]:h.lvl==='war'?['war',t('warning')]:['dgr',t('danger')];
+    return '<div class="hcard"><div class="lvl '+lv[0]+'">'+lv[1]+'</div>'
+      +'<div class="hmain"><div class="h1">🚆 '+h.num+' · '+h.name+'</div>'
+      +'<div class="h2">'+t('dist')+': '+h.dist+' KM · '+(h.speed?Math.round(h.speed)+' KM/H':t('speedU'))+'</div></div>'
+      +'<div class="hts">'+fmtTs(h.ts)+'</div></div>';
+  }).join('');
+}
+
+function renderChips(box){
+  box.innerHTML=[1,2,5,10,15].map(r=>'<button class="chip'+(r===S.radius?' on':'')+'" data-r="'+r+'">'+r+' KM</button>').join('');
+}
+
+/* ---- radar ---- */
+let zoomIdx=0;
+const ZOOMS=[1,1.8,3.2];
+function setZoom(){
+  const z=ZOOMS[zoomIdx];
+  const hw=16/z,hh=20/z;
+  $('radarSvg').setAttribute('viewBox',(-hw)+' '+(-hh)+' '+(2*hw)+' '+(2*hh));
+}
+$('zoomIn').onclick=()=>{if(zoomIdx<ZOOMS.length-1){zoomIdx++;setZoom();}};
+$('zoomOut').onclick=()=>{if(zoomIdx>0){zoomIdx--;setZoom();}};
+$('zoomReset').onclick=()=>{zoomIdx=0;setZoom();};
+
+function renderRadar(){
+  const z=ZOOMS[zoomIdx];
+  const lbls=document.querySelectorAll('.ringlbl');
+  lbls.forEach(l=>l.style.display=z>2.4?'none':'');
+  $('radiusCircle').setAttribute('r',S.radius);
+  // network chips
+  const rp=$('rNet');
+  rp.className='pill '+(net==='live'?'ok':net==='slow'?'warnp':'badp');
+  $('rNetTxt').textContent=t(net);
+  const age=dataAge();
+  const stale=net==='offline'&&age>30;
+  $('rAge').className='pill'+(stale?' badp':'');
+  $('rAge').textContent=(stale?'⚠️ ':'🕒 ')+tf('updatedAgo',age);
+  $('rTrainCount').textContent='🚆 '+AT().filter(x=>x.dist<=S.radius).length;
+  $('rApi').textContent='API '+apiCount;
+  $('radarNote').textContent=MODE==='live'?'LIVE RAILRADAR API':'SIMULATED DATA';
+  $('trackLine').style.opacity=MODE==='live'?'0':'';
+  $('trackDash').style.opacity=MODE==='live'?'0':'';
+  $('radarOffBan').style.display=net==='offline'?'flex':'none';
+  $('radarOffBan').textContent='⚠️ '+t('liveDataNo');
+  // train markers
+  const layer=$('trainLayer');
+  for(const tr of AT()){
+    let g=document.getElementById('mt-'+tr.d.num);
+    if(!g){
+      g=document.createElementNS('http://www.w3.org/2000/svg','g');
+      g.id='mt-'+tr.d.num;
+      g.innerHTML='<circle r=".5" fill="var(--amber)" stroke="#000" stroke-width=".08" opacity=".95"/>'
+        +'<text y=".18" font-size=".62" text-anchor="middle">🚆</text>'
+        +'<path class="arrow" d="M .62 0 L 1.15 -.3 L 1.15 .3 Z" fill="var(--amber)"/>'
+        +'<text class="lbl" x="0" y="1.15" font-size=".6" text-anchor="middle" fill="#eef2f6" font-family="JetBrains Mono" stroke="#0d1117" stroke-width=".08" paint-order="stroke">'+tr.d.num+'</text>';
+      layer.appendChild(g);
+    }
+    const ang=tr.pos.ang*180/Math.PI;
+    g.setAttribute('transform','translate('+tr.pos.x.toFixed(3)+','+tr.pos.y.toFixed(3)+')');
+    g.querySelector('.arrow').setAttribute('transform','rotate('+ang.toFixed(1)+')');
+    g.querySelector('circle').setAttribute('fill',tr.approach?(tr.dist<=2?'var(--red)':'var(--amber)'):'#8b98a5');
+    const lbl=g.querySelector('.lbl');
+    lbl.textContent=tr.d.num+' · '+tr.dist.toFixed(1)+'km';
+    lbl.style.display=z>2.4?'none':'';
+  }
+}
+
+/* draw track once */
+(function(){
+  const pts=TRACK.map(p=>p[0]+','+p[1]).join(' ');
+  $('trackLine').setAttribute('points',pts);
+  $('trackDash').setAttribute('points',pts);
+})();
+
+/* ================= navigation ================= */
+let curScreen='home';
+document.querySelectorAll('.bnav button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    curScreen=b.dataset.scr;
+    document.querySelectorAll('.bnav button').forEach(x=>x.classList.toggle('on',x===b));
+    document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id==='scr-'+curScreen));
+  });
+});
+
+/* ================= events ================= */
+$('btnAllow').onclick=()=>{
+  S.granted=true;S.gps=(manualLoc!=null);save();
+  $('permScreen').style.display='none';
+  $('app').style.display='flex';
+  try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();}catch(e){}
+  applyStatic();renderAll();
+  tryGetGpsLoc();
+};
+$('btnNotNow').onclick=()=>{
+  S.granted=false;S.gps=false;save();
+  $('permScreen').style.display='none';
+  $('app').style.display='flex';
+  applyStatic();renderAll();
+};
+$('gpsBanner').onclick=()=>{openLocModal();};
+$('rowLoc').onclick=()=>{openLocModal();};
+$('wmBtn').onclick=()=>{
+  S.workMode=!S.workMode;save();
+  $('swWm').checked=S.workMode;
+  toast(S.workMode?'🟢 '+t('wmOnToast'):'⏸ '+t('wmOffToast'),'inf');
+  renderAll();
+};
+document.addEventListener('click',e=>{
+  const c=e.target.closest('.chip[data-r]');
+  if(c){S.radius=+c.dataset.r;save();renderAll();}
+  const p=e.target.closest('.chip[data-p]');
+  if(p){pollRate=+p.dataset.p;S.pollRate=pollRate;save();restartPoll();applyStatic();renderAll();}
+});
+$('swVoice').onchange=e=>{S.voice=e.target.checked;save();};
+$('swVib').onchange=e=>{S.vibration=e.target.checked;save();};
+$('swSound').onchange=e=>{S.sound=e.target.checked;save();};
+$('swCrit').onchange=e=>{S.critical=e.target.checked;save();};
+$('swWm').onchange=e=>{S.workMode=e.target.checked;save();renderAll();};
+$('swDark').onchange=e=>{S.dark=e.target.checked;save();phone.classList.toggle('light',!S.dark);};
+document.querySelectorAll('.langbtn[data-lang]').forEach(b=>{
+  b.onclick=()=>{S.lang=b.dataset.lang;save();applyStatic();renderAll();};
+});
+$('rowAbout').onclick=()=>{openModal(t('about'),t('aboutText'));};
+$('rowSafety').onclick=()=>{openModal(t('safetyInfo'),t('disclaimer'));};
+function openModal(title,body){
+  $('mTitle').textContent=title;$('mBody').textContent=body;
+  $('modal').classList.add('on');
+}
+$('modal').addEventListener('click',e=>{
+  if(e.target===$('modal')||e.target.closest('.mclose'))$('modal').classList.remove('on');
+});
+
+/* ================= demo controls ================= */
+$('db-force').onclick=()=>{
+  if(MODE!=='demo'){toast(t('demoOnly'),'inf');return;}
+  let tr=trains.find(x=>x.approach)||trains[0];
+  tr.d.dir=1;
+  tr.s=sAtX(-2.45);
+  const p=pointAt(tr.s);tr.pos=p;tr.lastD=Math.hypot(p.x,p.y)+1;
+  tr.band=1;tr.fsShown=false;tr.approach=true;
+};
+$('db-net').onclick=()=>{
+  if(MODE!=='demo'){toast(t('demoOnly'),'inf');return;}
+  net=net==='live'?'slow':net==='slow'?'offline':'live';
+  if(net!=='offline')lastPollTs=Date.now();
+  toast('🌐 '+(net==='live'?t('netLive'):net==='slow'?t('netSlow'):t('netOff')),'inf');
+};
+$('db-gps').onclick=()=>{
+  if(MODE!=='demo'){toast(t('demoOnly'),'inf');return;}
+  S.gps=!S.gps;save();
+  toast(S.gps?'📡 '+t('gpsOnToast'):'📡 '+t('gpsOffToast'),S.gps?'inf':'war');
+};
+$('db-reset').onclick=()=>{
+  try{localStorage.removeItem('railalert_proto');}catch(e){}
+  location.reload();
+};
+document.querySelectorAll('.ts-btn').forEach(b=>{
+  b.onclick=()=>{
+    TS=+b.dataset.ts;
+    document.querySelectorAll('.ts-btn').forEach(x=>x.classList.toggle('on',x===b));
+  };
+});
+
+/* ================= LIVE API MODE (RailRadar) ================= */
+(function(){var d=document.getElementById('jsDot');if(d){d.style.background='#31c48d';d.title='JS active';}})();
+let MODE=(S.mode==='live')?'live':'demo';
+let apiKey='',apiCount=0,quotaWarned=false,lastNetOk=true;
+try{apiKey=localStorage.getItem('railalert_apikey')||'';apiCount=+(localStorage.getItem('railalert_apicount')||0)||0;}catch(e){}
+let pollRate=S.pollRate||30;
+let liveTrains=[];
+const liveMap=new Map();
+let userLat=null,userLng=null;
+let manualLoc=null;
+try{const ml=localStorage.getItem('railalert_loc');if(ml){manualLoc=JSON.parse(ml);}}catch(e){}
+if(manualLoc&&typeof manualLoc.lat==='number'&&typeof manualLoc.lng==='number'){
+  userLat=manualLoc.lat;userLng=manualLoc.lng;S.gps=true;S.granted=true;
+}
+let liveTimer=null,pollBusy=false;
+
+function AT(){return MODE==='live'?liveTrains:trains;}
+function saveApi(){try{localStorage.setItem('railalert_apicount',String(apiCount));}catch(e){}}
+function renderPollChips(){const arr=[15,30,60];$('pollChips').innerHTML=arr.map(r=>'<button class="chip'+(r===pollRate?' on':'')+'" data-p="'+r+'">'+r+'s</button>').join('');}
+function openKeyModal(){$('keyInput').value=apiKey;$('keyModal').classList.add('on');}
+function openLocModal(){
+  $('lmLat').value=manualLoc?String(manualLoc.lat):(userLat!=null?userLat.toFixed(5):'');
+  $('lmLng').value=manualLoc?String(manualLoc.lng):(userLng!=null?userLng.toFixed(5):'');
+  $('locModal').classList.add('on');
+}
+function clearManualLoc(){manualLoc=null;try{localStorage.removeItem('railalert_loc');}catch(e){}userLat=null;userLng=null;S.gps=false;save();}
+function tryGetGpsLoc(){
+  if(!(navigator.geolocation&&navigator.geolocation.getCurrentPosition)){toast(t('locGpsFail'),'war');return;}
+  toast('📡 …','inf');
+  navigator.geolocation.getCurrentPosition(
+    p=>{userLat=p.coords.latitude;userLng=p.coords.longitude;manualLoc=null;
+        try{localStorage.removeItem('railalert_loc');}catch(e){}
+        S.gps=true;S.granted=true;save();renderAll();
+        $('locModal').classList.remove('on');toast('📍 '+t('locGpsOk'),'inf');},
+    ()=>{toast(t('locGpsFail'),'war');},
+    {enableHighAccuracy:true,timeout:15000,maximumAge:5000});
+}
+function setMode(m){
+  MODE=m;S.mode=m;save();    if(m==='live'){
+    toast(t('liveOnToast'),'inf');
+    if(!apiKey){toast(t('liveNoKey'),'war');openKeyModal();}
+    startLive();
+  }else{
+    toast(t('demoOnToast'),'inf');
+    stopLive();
+  }
+  applyStatic();renderAll();
+}
+function startLive(){
+  if(navigator.geolocation&&navigator.geolocation.watchPosition){
+    navigator.geolocation.watchPosition(
+      p=>{userLat=p.coords.latitude;userLng=p.coords.longitude;manualLoc=null;try{localStorage.removeItem('railalert_loc');}catch(e){}S.gps=true;S.granted=true;save();renderAll();},
+      ()=>{if(!manualLoc){S.gps=false;save();renderAll();}},
+      {enableHighAccuracy:true,maximumAge:5000,timeout:20000});
+  }
+  if(liveTimer)clearInterval(liveTimer);
+  liveTimer=setInterval(pollLive,pollRate*1000);
+  pollLive();
+}
+function stopLive(){
+  if(liveTimer){clearInterval(liveTimer);liveTimer=null;}
+  liveTrains=[];liveMap.clear();
+  if(net==='offline')net='live';
+  if(emTrain){emTrain=null;$('emerg').classList.remove('on');}
+}
+function restartPoll(){
+  if(MODE==='live'&&liveTimer){clearInterval(liveTimer);liveTimer=setInterval(pollLive,pollRate*1000);}
+}
+async function pollLive(){
+  if(pollBusy||MODE!=='live'||!apiKey||userLat==null||userLng==null)return;
+  if(document.hidden)return;
+  pollBusy=true;
+  apiCount++;saveApi();
+  if(apiCount>900&&!quotaWarned){quotaWarned=true;toast('⚠️ '+tf('quotaWarn',apiCount),'war');}
+  try{
+    const r=await fetch('https://api.railradar.in/v1/legacy/trains/live-map',{headers:{'Authorization':'Bearer '+apiKey,'Accept':'application/json'}});
+    if(r.status===401){if(lastNetOk){toast('🔑 '+t('liveErr401'),'dgr');lastNetOk=false;}net='offline';pollBusy=false;renderAll();return;}
+    if(r.status===429){if(lastNetOk){toast('⛔ '+t('liveErr429'),'dgr');lastNetOk=false;}net='offline';pollBusy=false;renderAll();return;}
+    if(!r.ok){if(lastNetOk){toast('🌐 '+t('liveErrNet'),'war');lastNetOk=false;}net='offline';pollBusy=false;renderAll();return;}
+    const j=await r.json();
+    if(!j||!j.success){if(lastNetOk){toast('🌐 '+t('liveErrNet'),'war');lastNetOk=false;}net='offline';pollBusy=false;renderAll();return;}
+    lastNetOk=true;
+    const now=Date.now(),seen=new Set();
+    for(const x of (j.data||[])){
+      const lat=+x.current_lat,lng=+x.current_lng;
+      if(!isFinite(lat)||!isFinite(lng))continue;
+      const px=(lng-userLng)*111.32*Math.cos(userLat*Math.PI/180);
+      const py=-(lat-userLat)*110.574;
+      const dist=Math.hypot(px,py);
+      if(dist>25)continue;
+      seen.add(x.train_number);
+      let tr=liveMap.get(x.train_number);
+      if(!tr){
+        tr={d:{num:x.train_number,name:x.train_name||'-',speed:null},pos:{x:px,y:py,ang:0},dist,lastD:dist,approach:false,band:0,fsShown:false,ts:now,fresh:true};
+        liveMap.set(x.train_number,tr);
+      }else{
+        const dtH=(now-tr.ts)/3600000;
+        if(dtH>0.0004){
+          const v=Math.abs(dist-tr.dist)/dtH;
+          tr.d.speed=(v<=220)?Math.round(v):null;
+          if(dist<tr.dist-0.02)tr.approach=true;
+          else if(dist>tr.dist+0.02)tr.approach=false;
+        }
+        tr.pos={x:px,y:py,ang:Math.atan2(py-tr.pos.y,px-tr.pos.x)};
+        tr.dist=dist;tr.ts=now;tr.fresh=false;
+      }
+      checkTrain(tr);
+    }
+    for(const [num,tr] of liveMap){
+      if(!seen.has(num)){tr.misses=(tr.misses||0)+1;if(tr.misses>3)liveMap.delete(num);}
+      else tr.misses=0;
+    }
+    liveTrains=Array.from(liveMap.values());
+    net='live';lastPollTs=now;
+    if(emTrain&&!liveMap.has(emTrain.d.num)){emTrain=null;$('emerg').classList.remove('on');}
+    else if(emTrain)updateEmergency();
+  }catch(e){
+    if(lastNetOk){toast('🌐 '+t('liveErrNet'),'war');lastNetOk=false;}
+    net='offline';
+  }
+  pollBusy=false;
+  renderAll();
+}
+document.querySelectorAll('.langbtn[data-mode]').forEach(b=>{b.onclick=()=>setMode(b.dataset.mode);});
+$('rowKey').onclick=openKeyModal;
+$('rowKeySt').onclick=openKeyModal;
+$('kmSave').onclick=()=>{
+  const v=$('keyInput').value.trim().replace(/[\s<>'"`]/g,'');
+  if(!v){toast(t('liveNoKey'),'war');return;}
+  apiKey=v;try{localStorage.setItem('railalert_apikey',v);}catch(e){}
+  $('keyModal').classList.remove('on');applyStatic();lastNetOk=true;
+  if(MODE==='live')pollLive();
+};
+$('kmClear').onclick=()=>{apiKey='';try{localStorage.removeItem('railalert_apikey');}catch(e){}$('keyModal').classList.remove('on');applyStatic();};
+$('lmTryGps').onclick=()=>{tryGetGpsLoc();};
+$('lmSave').onclick=()=>{
+  const la=parseFloat($('lmLat').value.replace(',','.').trim());
+  const lo=parseFloat($('lmLng').value.replace(',','.').trim());
+  if(isNaN(la)||isNaN(lo)||la<-90||la>90||lo<-180||lo>180){toast(t('lmBad'),'war');return;}
+  manualLoc={lat:la,lng:lo};try{localStorage.setItem('railalert_loc',JSON.stringify(manualLoc));}catch(e){}
+  userLat=la;userLng=lo;S.gps=true;S.granted=true;save();
+  $('locModal').classList.remove('on');applyStatic();renderAll();
+  toast(t('locSavedToast'),'inf');
+  if(MODE==='live')pollLive();
+};
+$('lmClear').onclick=()=>{clearManualLoc();$('locModal').classList.remove('on');applyStatic();renderAll();toast(t('locClearedToast'),'inf');};
+$('locModal').addEventListener('click',e=>{if(e.target===$('locModal'))$('locModal').classList.remove('on');});
+$('keyModal').addEventListener('click',e=>{if(e.target===$('keyModal'))$('keyModal').classList.remove('on');});
+
+/* ================= static i18n ================= */
+function applyStatic(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k=el.dataset.i18n;
+    if(t(k)!==k)el.textContent=t(k);
+  });
+  phone.classList.toggle('light',!S.dark);
+  document.documentElement.lang=S.lang;
+  $('swVoice').checked=S.voice;$('swVib').checked=S.vibration;
+  $('swSound').checked=S.sound;$('swCrit').checked=S.critical;
+  $('swWm').checked=S.workMode;$('swDark').checked=S.dark;
+  document.querySelectorAll('.langbtn[data-lang]').forEach(b=>b.classList.toggle('on',b.dataset.lang===S.lang));
+  renderChips($('radiusChips2'));
+  document.querySelectorAll('.langbtn[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode===MODE));
+  renderPollChips();
+  $('keySt').textContent=apiKey?t('keySet'):t('keyNotSet');
+  $('apiCountSt').textContent=apiCount+' / 1,000';
+  $('kmTitle').textContent=t('kmTitle');
+  $('kmHint').textContent=t('kmHint');
+  $('kmNote').textContent=t('kmNote');
+  $('kmSave').textContent=t('kmSave');
+  $('kmClear').textContent=t('kmClear');
+  $('lmTitle').textContent=t('lmTitle');
+  $('lmTryGps').textContent=t('lmTryGps');
+  $('lmHint').textContent=t('lmHint');
+  $('lmSave').textContent=t('lmSave');
+  $('lmClear').textContent=t('lmClear');
+  $('lmLat').placeholder=t('lmLatPh');
+  $('lmLng').placeholder=t('lmLngPh');
+  $('locSt').textContent=manualLoc?('📍 '+manualLoc.lat.toFixed(3)+', '+manualLoc.lng.toFixed(3)):'›';
+  $('rowKey').classList.toggle('needkey',!apiKey);
+  $('rowKeySt').classList.toggle('needkey',!apiKey);
+}
+
+/* ================= mobile demo drawer ================= */
+const side=document.querySelector('.side'),scrim=$('scrim');
+function setDrawer(open){side.classList.toggle('open',open);scrim.classList.toggle('on',open);}
+$('drawerBtn').onclick=()=>setDrawer(true);
+$('drawerClose').onclick=()=>setDrawer(false);
+scrim.onclick=()=>setDrawer(false);
+
+/* ================= boot ================= */
+applyStatic();
+setZoom();
+if('speechSynthesis' in window){try{speechSynthesis.getVoices();}catch(e){}}
+if(S.granted){$('permScreen').style.display='none';$('app').style.display='flex';}
+if(MODE==='live'&&apiKey){startLive();}
+renderAll();
+</script>
+</body>
+</html>
